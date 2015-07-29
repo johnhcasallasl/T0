@@ -18,10 +18,6 @@ Tier0Configuration - Global configuration object
 | |       |
 | |       |--> ProcessingSite - Main (CERN) site where processing is done.
 | |       |
-| |       |--> BulkInjectNode - Node from which bulk Tier0 data is injected.
-| |       |
-| |       |--> ExpressInjectNode - Node from which express Tier0 data is injected.
-| |       |
 | |       |--> ExpressSubscribeNode - Node to which Express is subscribed.
 | |       |
 | |       |--> BulkDataType - The bulk data type for the run
@@ -33,8 +29,7 @@ Tier0Configuration - Global configuration object
 | |       |--> AlcaHarvestTimeout - AlcaHarvesting for a run/stream is normally trigered by
 | |       |                         fileset closing (ie. all data received and processed).
 | |       |                         This timeout will configure an additional time trigger
-| |       |                         based on the run end_time (or when the last streamer
-| |       |                         file was received).
+| |       |                         based on the run stop_time.
 | |       |
 | |       |--> AlcaHarvestDir - Directory to which the AlcaHarvest job copies the
 | |       |                     sqlite file and associated metadata.
@@ -43,8 +38,7 @@ Tier0Configuration - Global configuration object
 | |       |                             if the current run is completely finished (ie. all data
 | |       |                             received, processed, alca harvested and conditions
 | |       |                             uploaded). This timeout will configure an additional
-| |       |                             time trigger based on the run end_time ( or when the
-| |       |                             last streamer file was received).
+| |       |                             time trigger based on the run stop_time.
 | |       |
 | |       |--> DropBoxHost - Machine where we upload the PCL conditions to
 | |       |
@@ -96,6 +90,8 @@ Tier0Configuration - Global configuration object
 |             |     |--> MaxInputEvents - max input events for repack and repack merge job
 |             |     |
 |             |     |--> MaxInputFiles - max input files for repack and repack merge job
+|             |     |
+|             |     |--> MaxLatency - max latency to trigger repack or repack merge job
 |             |     |
 |             |     |--> BlockCloseDelay - delay to close block in WMAgent
 |             |
@@ -194,6 +190,8 @@ Tier0Configuration - Global configuration object
             |
             |--> AlcaSkims - List of alca skims active for this dataset
             |
+            |--> PhysicsSkims - List of physics skims active for this dataset
+            |
             |--> DqmSequences - List of dqm sequences active for this dataset
             |
             |--> BlockCloseDelay - Delay to close block in WMAgent
@@ -222,12 +220,9 @@ def createTier0Config():
     tier0Config.Global.ScramArches = {}
     tier0Config.Global.Backfill = None
 
-    tier0Config.Global.ProcessingSite = "T2_CH_CERN_T0"
+    tier0Config.Global.ProcessingSite = "T0_CH_CERN"
 
-    tier0Config.Global.BulkInjectNode = "T2_CH_CERN"
-    tier0Config.Global.ExpressInjectNode = "T2_CH_CERN"
-
-    tier0Config.Global.ExpressSubscribeNode = "T2_CH_CERN"
+    tier0Config.Global.ExpressSubscribeNode = None
 
     tier0Config.Global.DQMDataTier = "DQMIO"
 
@@ -338,76 +333,87 @@ def addDataset(config, datasetName, **settings):
     #
     if 'scenario' in settings:
         datasetConfig.Scenario = settings['scenario']
-    elif not hasattr(datasetConfig, "Scenario"):
-        msg = "Tier0Config.addDataset : no scenario defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "Scenario") or not isinstance(datasetConfig.Scenario, str):
+        msg = "Tier0Config.addDataset : no valid scenario defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'do_reco' in settings:
         datasetConfig.DoReco = settings['do_reco']
-    elif not hasattr(datasetConfig, "DoReco"):
-        msg = "Tier0Config.addDataset : no do_reco defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "DoReco") or not isinstance(datasetConfig.DoReco, bool):
+        msg = "Tier0Config.addDataset : no valid do_reco defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'reco_delay' in settings:
         datasetConfig.RecoDelay = settings['reco_delay']
-    elif not hasattr(datasetConfig, "RecoDelay"):
-        msg = "Tier0Config.addDataset : no reco_delay defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "RecoDelay") or not isinstance(datasetConfig.RecoDelay, int):
+        msg = "Tier0Config.addDataset : no valid reco_delay defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'reco_delay_offset' in settings:
         datasetConfig.RecoDelayOffset = settings['reco_delay_offset']
-    elif not hasattr(datasetConfig, "RecoDelayOffset"):
-        msg = "Tier0Config.addDataset : no reco_delay_offset defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "RecoDelayOffset") or not isinstance(datasetConfig.RecoDelayOffset, int):
+        msg = "Tier0Config.addDataset : no valid reco_delay_offset defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'proc_version' in settings:
         datasetConfig.ProcessingVersion = settings['proc_version']
-    elif not hasattr(datasetConfig, "ProcessingVersion"):
-        msg = "Tier0Config.addDataset : no proc_version defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "ProcessingVersion") or not (isinstance(datasetConfig.ProcessingVersion, int) or isinstance(datasetConfig.ProcessingVersion, dict)):
+        msg = "Tier0Config.addDataset : no valid proc_version defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'cmssw_version' in settings:
         datasetConfig.CMSSWVersion = settings['cmssw_version']
-    elif not hasattr(datasetConfig, "CMSSWVersion"):
-        msg = "Tier0Config.addDataset : no cmssw_version defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "CMSSWVersion") or not (isinstance(datasetConfig.CMSSWVersion, str) or isinstance(datasetConfig.CMSSWVersion, dict)):
+        msg = "Tier0Config.addDataset : no valid cmssw_version defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'global_tag' in settings:
         datasetConfig.GlobalTag = settings['global_tag']
-    elif not hasattr(datasetConfig, "GlobalTag"):
-        msg = "Tier0Config.addDataset : no global_tag defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "GlobalTag") or not (isinstance(datasetConfig.GlobalTag, str) or isinstance(datasetConfig.GlobalTag, dict)):
+        msg = "Tier0Config.addDataset : no valid global_tag defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'reco_split' in settings:
         datasetConfig.RecoSplit = settings['reco_split']
-    elif not hasattr(datasetConfig, "RecoSplit"):
-        msg = "Tier0Config.addDataset : no reco_split defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "RecoSplit") or not isinstance(datasetConfig.RecoSplit, int):
+        msg = "Tier0Config.addDataset : no valid reco_split defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'write_reco' in settings:
         datasetConfig.WriteRECO = settings['write_reco']
-    elif not hasattr(datasetConfig, "WriteRECO"):
-        msg = "Tier0Config.addDataset : no write_reco defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "WriteRECO") or not isinstance(datasetConfig.WriteRECO, bool):
+        msg = "Tier0Config.addDataset : no valid write_reco defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'write_aod' in settings:
         datasetConfig.WriteAOD = settings['write_aod']
-    elif not hasattr(datasetConfig, "WriteAOD"):
-        msg = "Tier0Config.addDataset : no write_aod defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "WriteAOD") or not isinstance(datasetConfig.WriteAOD, bool):
+        msg = "Tier0Config.addDataset : no valid write_aod defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'write_miniaod' in settings:
         datasetConfig.WriteMINIAOD = settings['write_miniaod']
-    elif not hasattr(datasetConfig, "WriteMINIAOD"):
-        msg = "Tier0Config.addDataset : no write_miniaod defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
-
+    if not hasattr(datasetConfig, "WriteMINIAOD") or not isinstance(datasetConfig.WriteMINIAOD, bool):
+        msg = "Tier0Config.addDataset : no valid write_miniaod defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if 'write_dqm' in settings:
         datasetConfig.WriteDQM = settings['write_dqm']
-    elif not hasattr(datasetConfig, "WriteDQM"):
-        msg = "Tier0Config.addDataset : no write_dqm defined for dataset %s or Default" % datasetName
-        raise RuntimeError, msg
+    if not hasattr(datasetConfig, "WriteDQM") or not isinstance(datasetConfig.WriteDQM, bool):
+        msg = "Tier0Config.addDataset : no valid write_dqm defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
+
+    if 'timePerEvent' in settings:
+        datasetConfig.TimePerEvent = settings['timePerEvent']
+    if not hasattr(datasetConfig, "TimePerEvent") or not (isinstance(datasetConfig.TimePerEvent, int) or isinstance(datasetConfig.TimePerEvent, float)):
+        msg = "Tier0Config.addDataset : no valid timePerEvent defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
+
+    if 'sizePerEvent' in settings:
+        datasetConfig.SizePerEvent = settings['sizePerEvent']
+    if not hasattr(datasetConfig, "SizePerEvent") or not (isinstance(datasetConfig.SizePerEvent, int) or isinstance(datasetConfig.SizePerEvent, float)):
+        msg = "Tier0Config.addDataset : no valid sizePerEvent defined for dataset %s or Default" % datasetName
+        raise RuntimeError(msg)
 
     if hasattr(datasetConfig, "GlobalTagConnect"):
         datasetConfig.GlobalTagConnect = settings.get('global_tag_connect', datasetConfig.GlobalTagConnect)
@@ -428,6 +434,11 @@ def addDataset(config, datasetName, **settings):
         datasetConfig.DiskNode = settings.get('disk_node', datasetConfig.DiskNode)
     else:
         datasetConfig.DiskNode = settings.get('disk_node', None)
+
+    if hasattr(datasetConfig, "RAWtoDisk"):
+        datasetConfig.RAWtoDisk = settings.get('raw_to_disk', datasetConfig.RAWtoDisk)
+    else:
+        datasetConfig.RAWtoDisk = settings.get('raw_to_disk', True)
 
     if hasattr(datasetConfig, "Multicore"):
         datasetConfig.Multicore = settings.get('multicore', datasetConfig.Multicore)
@@ -451,6 +462,7 @@ def addDataset(config, datasetName, **settings):
     # finally some parameters for which Default isn't used
     #
     datasetConfig.AlcaSkims = settings.get("alca_producers", [])
+    datasetConfig.PhysicsSkims = settings.get("physics_skims", [])
     datasetConfig.DqmSequences = settings.get("dqm_sequences", [])
 
     return
@@ -497,9 +509,9 @@ def setBackfill(config, mode):
 
     Set the backfill mode in the configuration.
     """
-    if mode not in [ None, 1, 2 ]:
+    if mode not in [ None, 1, 2, 3 ]:
         msg = "Tier0Config.setBackfill : %s is not a valid backfill mode" % mode
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     config.Global.Backfill = mode
     return
@@ -511,24 +523,6 @@ def setProcessingSite(config, site):
     Set the (CERN) site used for processing.
     """
     config.Global.ProcessingSite = site
-    return
-
-def setBulkInjectNode(config, node):
-    """
-    _setBulkInjectNode_
-
-    Set the node from which bulk Tier0 data is injected.
-    """
-    config.Global.BulkInjectNode = node
-    return
-
-def setExpressInjectNode(config, node):
-    """
-    _setExpressInjectNode_
-
-    Set the node from which express Tier0 data is injected.
-    """
-    config.Global.ExpressInjectNode = node
     return
 
 def setExpressSubscribeNode(config, node):
@@ -558,7 +552,7 @@ def setDQMDataTier(config, datatier):
     """
     if datatier not in [ "DQM", "DQMIO" ]:
         msg = "Tier0Config.setDQMDataTier : %s not an allowed DQM data tier !" % datatier
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     config.Global.DQMDataTier = datatier
     return
@@ -675,6 +669,11 @@ def addRepackConfig(config, streamName, **options):
     else:
         streamConfig.Repack.MaxInputFiles = options.get("maxInputFiles", 1000)
 
+    if hasattr(streamConfig.Repack, "MaxLatency"):
+        streamConfig.Repack.MaxLatency = options.get("maxLatency", streamConfig.Repack.MaxLatency)
+    else:
+        streamConfig.Repack.MaxLatency = options.get("maxLatency", 12 * 3600)
+
     if streamConfig.Repack.MaxOverSize > streamConfig.Repack.MaxEdmSize:
         streamConfig.Repack.MaxOverSize = streamConfig.Repack.MaxEdmSize
 
@@ -692,40 +691,51 @@ def addExpressConfig(config, streamName, **options):
     Add an express configuration to a given stream.
 
     """
-    scenario = options.get("scenario", None)
-    if scenario == None:
-        msg = "Tier0Config.addExpressConfig : no scenario defined for stream %s" % streamName
-        raise RuntimeError, msg
-
-    data_tiers = options.get("data_tiers", [])
-    if type(data_tiers) != list or len(data_tiers) == 0:
-        msg = "Tier0Config.addExpressConfig : data_tiers needs to be list with at least one tier"
-        raise RuntimeError, msg
-
-    alcamerge_config = None
-    if "ALCARECO" in data_tiers:
-        alcamerge_config = options.get("alcamerge_config", None)
-
     streamConfig = retrieveStreamConfig(config, streamName)
     streamConfig.ProcessingStyle = "Express"
+
     streamConfig.VersionOverride = options.get("versionOverride", {})
 
     streamConfig.section_("Express")
 
+    scenario = options.get("scenario", None)
+    if not scenario:
+        msg = "Tier0Config.addExpressConfig : no scenario defined for stream %s" % streamName
+        raise RuntimeError(msg)
     streamConfig.Express.Scenario = scenario
+
+    data_tiers = options.get("data_tiers", [])
+    if not isinstance(data_tiers, list) or len(data_tiers) == 0:
+        msg = "Tier0Config.addExpressConfig : data_tiers needs to be list with at least one tier"
+        raise RuntimeError(msg)
     streamConfig.Express.DataTiers = data_tiers
-    streamConfig.Express.GlobalTag = options.get("global_tag", None)
+
+    global_tag = options.get("global_tag", None)
+    if not global_tag:
+        msg = "Tier0Config.addExpressConfig : global_tag not defined for stream %s" % streamName
+        raise RuntimeError(msg)
+    streamConfig.Express.GlobalTag = global_tag
 
     streamConfig.Express.GlobalTagConnect = options.get("global_tag_connect", None)
-
     streamConfig.Express.RecoCMSSWVersion = options.get("reco_version", None)
-
     streamConfig.Express.Multicore = options.get('multicore', None)
 
     streamConfig.Express.AlcaSkims = options.get("alca_producers", [])
     streamConfig.Express.WriteDQM = options.get("write_dqm", True)
     streamConfig.Express.DqmSequences = options.get("dqm_sequences", [])
     streamConfig.Express.ProcessingVersion = options.get("proc_ver", 1)
+
+    timePerEvent = options.get("timePerEvent", None)
+    if timePerEvent == None:
+        msg = "Tier0Config.addExpressConfig : no timePerEvent defined for stream %s" % streamName
+        raise RuntimeError(msg)
+    streamConfig.Express.TimePerEvent = timePerEvent
+
+    sizePerEvent = options.get("sizePerEvent", None)
+    if sizePerEvent == None:
+        msg = "Tier0Config.addExpressConfig : no sizePerEvent defined for stream %s" % streamName
+        raise RuntimeError(msg)
+    streamConfig.Express.SizePerEvent = sizePerEvent
 
     streamConfig.Express.MaxInputRate = options.get("maxInputRate", 23 * 1000)
     streamConfig.Express.MaxInputEvents = options.get("maxInputEvents", 200)
@@ -752,22 +762,22 @@ def addRegistrationConfig(config, streamName, **options):
     primds = options.get("primds", None)
     if primds == None:
         msg = "Tier0Config.addRegistrationConfig : no primary dataset defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     data_tier = options.get("data_tier", None)
     if data_tier == None:
         msg = "Tier0Config.addRegistrationConfig : no data_tier defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     acq_era = options.get("acq_era", None)
     if acq_era == None:
         msg = "Tier0Config.addRegistrationConfig : no acquisition era defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     proc_version = options.get("proc_version", None)
     if proc_version == None:
         msg = "Tier0Config.addRegistrationConfig : no processing version defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     proc_string = options.get("proc_string", None)
 
@@ -804,27 +814,27 @@ def addConversionConfig(config, streamName, **options):
     primds = options.get("primds", None)
     if primds == None:
         msg = "Tier0Config.addConversionConfig : no primary dataset defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     data_tier = options.get("data_tier", None)
     if data_tier == None:
         msg = "Tier0Config.addConversionConfig : no data tier defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     conv_type = options.get("conv_type", None)
     if conv_type == None:
         msg = "Tier0Config.addConversionConfig : no conversion type defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     acq_era = options.get("acq_era", None)
     if acq_era == None:
         msg = "Tier0Config.addConversionConfig : no acquisition era defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     proc_version = options.get("proc_version", None)
     if proc_version == None:
         msg = "Tier0Config.addConversionConfig : no processing version defined for stream %s" % streamName
-        raise RuntimeError, msg
+        raise RuntimeError(msg)
 
     proc_string = options.get("proc_string", None)
 

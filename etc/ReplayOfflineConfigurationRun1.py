@@ -3,6 +3,7 @@ _OfflineConfiguration_
 
 Processing configuration for the Tier0 - Replay version - Run1 Scale Tests
 """
+from __future__ import print_function
 
 from T0.RunConfig.Tier0Config import addDataset
 from T0.RunConfig.Tier0Config import createTier0Config
@@ -13,8 +14,6 @@ from T0.RunConfig.Tier0Config import setBaseRequestPriority
 from T0.RunConfig.Tier0Config import setBackfill
 from T0.RunConfig.Tier0Config import setBulkDataType
 from T0.RunConfig.Tier0Config import setProcessingSite
-from T0.RunConfig.Tier0Config import setBulkInjectNode
-from T0.RunConfig.Tier0Config import setExpressInjectNode
 from T0.RunConfig.Tier0Config import setExpressSubscribeNode
 from T0.RunConfig.Tier0Config import setDQMDataTier
 from T0.RunConfig.Tier0Config import setDQMUploadUrl
@@ -33,11 +32,7 @@ tier0Config = createTier0Config()
 setConfigVersion(tier0Config, "replace with real version")
 
 # Settings up sites
-processingSite = "T2_CH_CERN_T0"
-cernPhedexNode = "T2_CH_CERN"
-#processingSite = "T2_CH_CERN_AI"
-#cernPhedexNode = "T0_CH_CERN_Disk"
-
+processingSite = "T0_CH_CERN"
 
 # Set global parameters:
 #  Acquisition era
@@ -47,13 +42,11 @@ cernPhedexNode = "T2_CH_CERN"
 #  Processing site (where jobs run)
 #  PhEDEx locations
 setAcquisitionEra(tier0Config, "Tier0_Test_SUPERBUNNIES_vocms229")
-setBaseRequestPriority(tier0Config, 200000)
+setBaseRequestPriority(tier0Config, 300000)
 setBackfill(tier0Config, 1)
 setBulkDataType(tier0Config, "data")
 setProcessingSite(tier0Config, processingSite)
-setBulkInjectNode(tier0Config, cernPhedexNode)
-setExpressInjectNode(tier0Config, cernPhedexNode)
-setExpressSubscribeNode(tier0Config, "T2_CH_CERN")
+setExpressSubscribeNode(tier0Config, None)
 
 # Override for DQM data tier
 setDQMDataTier(tier0Config, "DQMIO")
@@ -66,7 +59,7 @@ defaultRecoTimeout =  10 * 60
 defaultRecoLockTimeout = 5 * 60
 
 # DQM Server
-setDQMUploadUrl(tier0Config, "https://cmsweb.cern.ch/dqm/dev")
+setDQMUploadUrl(tier0Config, "https://cmsweb.cern.ch/dqm/dev;https://cmsweb-testbed.cern.ch/dqm/offline-test")
 
 # PCL parameters
 setPromptCalibrationConfig(tier0Config,
@@ -77,10 +70,10 @@ setPromptCalibrationConfig(tier0Config,
                            validationMode = True)
 
 # Defaults for CMSSW version
-defaultCMSSWVersion = "CMSSW_7_4_7_patch2"
+defaultCMSSWVersion = "CMSSW_8_0_18_patch1"
 
 # Configure ScramArch
-setDefaultScramArch(tier0Config, "slc6_amd64_gcc491")
+setDefaultScramArch(tier0Config, "slc6_amd64_gcc530")
 setScramArch(tier0Config, "CMSSW_5_3_20", "slc6_amd64_gcc472")
 
 # Configure scenarios
@@ -94,9 +87,9 @@ expressProcVersion = 1
 alcarawProcVersion = 1
 
 # Defaults for GlobalTag
-expressGlobalTag = "74X_dataRun2_Express_v0"
-promptrecoGlobalTag = "74X_dataRun2_Prompt_v1"
-alcap0GlobalTag = "74X_dataRun2_Prompt_v1"
+expressGlobalTag = "80X_dataRun2_Express_v12"
+promptrecoGlobalTag = "80X_dataRun2_Prompt_v11"
+alcap0GlobalTag = "80X_dataRun2_Prompt_v11"
 
 # Mandatory for CondDBv2
 globalTagConnect = "frontier://PromptProd/CMS_CONDITIONS"
@@ -115,19 +108,13 @@ alcarawSplitting = 20000 * numberOfCores
 repackVersionOverride = {
     "CMSSW_5_2_7" : "CMSSW_5_3_20",
     "CMSSW_5_2_8" : "CMSSW_5_3_20",
-    "CMSSW_5_2_9" : "CMSSW_5_3_20",
+    "CMSSW_5_2_9" : "CMSSW_5_3_20"
     }
 expressVersionOverride = {
     "CMSSW_5_2_7" : "CMSSW_5_3_20",
     "CMSSW_5_2_8" : "CMSSW_5_3_20",
-    "CMSSW_5_2_9" : "CMSSW_5_3_20",
+    "CMSSW_5_2_9" : "CMSSW_5_3_20"
     }
-
-#hltmonVersionOverride = {
-#    "CMSSW_5_2_7" : "CMSSW_5_2_7_hltpatch1",
-#    "CMSSW_5_2_8" : "CMSSW_5_2_7_hltpatch1",
-#    "CMSSW_5_2_9" : "CMSSW_5_2_7_hltpatch1",
-#    }
 
 #set default repack settings for bulk streams
 addRepackConfig(tier0Config, "Default",
@@ -138,8 +125,9 @@ addRepackConfig(tier0Config, "Default",
                 maxInputSize = 4 * 1024 * 1024 * 1024,
                 maxEdmSize = 10 * 1024 * 1024 * 1024,
                 maxOverSize = 8 * 1024 * 1024 * 1024,
-                maxInputEvents = 250 * 1000,
+                maxInputEvents = 100 * 1000 * 1000,
                 maxInputFiles = 1000,
+                maxLatency = 24 * 3600,
                 blockCloseDelay = 1200,
                 versionOverride = repackVersionOverride)
 
@@ -156,8 +144,11 @@ addDataset(tier0Config, "Default",
            global_tag_connect = globalTagConnect,
 #           archival_node = "T0_CH_CERN_MSS",
 #           tape_node = "T1_US_FNAL_MSS",
-#           disk_node = "T1_CH_FNAL_Disk",
+#           disk_node = "T1_US_FNAL_Disk",
+#           raw_to_disk = False,
            blockCloseDelay = 1200,
+           timePerEvent = 5,
+           sizePerEvent = 1500,
            scenario = ppScenario)
 
 ###############################
@@ -177,6 +168,8 @@ addDataset(tier0Config, "Cosmics",
 #           tape_node = "T1_US_FNAL_MSS",
 #           disk_node = "T1_US_FNAL_Disk",
 #           siteWhitelist = [ "T1_US_FNAL_Disk" ],
+           timePerEvent = 0.5,
+           sizePerEvent = 155,
            scenario = cosmicsScenario)
 addDataset(tier0Config, "JetHT",
            do_reco = True,
@@ -215,7 +208,7 @@ addDataset(tier0Config, "ParkingMonitor",
            do_reco = True,
            scenario = ppScenario)
 
-datasets = [ "BJetPlusX", "BTag", "MultiJet", "MuEG", "MuHad"," ElectronHad",
+datasets = [ "BJetPlusX", "BTag", "MultiJet", "MuEG", "MuHad", "ElectronHad",
              "PhotonHad", "HTMHT", "Tau", "TauPlusX", "NoBPTX", "JetMon" ]
 
 for dataset in datasets:
@@ -243,10 +236,10 @@ for dataset in datasets:
 addDataset(tier0Config, "HcalNZS",
            do_reco = True,
            scenario = hcalnzsScenario)
-addDataset(tier0Config,"TestEnablesEcalHcalDT",
+addDataset(tier0Config, "TestEnablesEcalHcalDT",
            do_reco = False,
            scenario = "AlCaTestEnable")
-addDataset(tier0Config,"TestEnablesTracker",
+addDataset(tier0Config, "TestEnablesTracker",
            do_reco = True,
            write_reco = False, write_aod = False, write_miniaod = False, write_dqm = True,
            scenario = "AlCaTestEnable")
@@ -255,24 +248,26 @@ addDataset(tier0Config,"TestEnablesTracker",
 ### special AlcaRaw PDs ###
 ###########################
 
-addDataset(tier0Config,"AlCaP0",
+addDataset(tier0Config, "AlCaP0",
            do_reco = False,
            write_reco = False, write_aod = False, write_miniaod = False, write_dqm = True,
            reco_split = alcarawSplitting,
            proc_version = alcarawProcVersion,
            global_tag = alcap0GlobalTag,
            scenario = "AlCaP0")
-addDataset(tier0Config,"AlCaPhiSym",
+addDataset(tier0Config, "AlCaPhiSym",
            do_reco = False,
            write_reco = False, write_aod = False, write_miniaod = False, write_dqm = True,
            reco_split = alcarawSplitting,
            proc_version = alcarawProcVersion,
            scenario = "AlCaPhiSymEcal")
-addDataset(tier0Config,"AlCaLumiPixels",
+addDataset(tier0Config, "AlCaLumiPixels",
            do_reco = True,
            write_reco = False, write_aod = False, write_miniaod = False, write_dqm = True,
            reco_split = alcarawSplitting,
            proc_version = alcarawProcVersion,
+           timePerEvent = 0.02,
+           sizePerEvent = 38,
            scenario = "AlCaLumiPixels")
 
 
@@ -365,7 +360,7 @@ for dataset in datasets:
 #################################
 
 datasets = [ "HighPileUpHPF", "L1EGHPF", "L1MuHPF", "L1JetHPF",
-             "ZeroBiasHPF0","HLTPhysics1", "HLTPhysics2" ]
+             "ZeroBiasHPF0", "HLTPhysics1", "HLTPhysics2" ]
 
 for dataset in datasets:
     addDataset(tier0Config, dataset,
@@ -390,13 +385,13 @@ addDataset(tier0Config, "DoubleMu25ns",
 addDataset(tier0Config, "DoubleMuParked25ns",
            do_reco = True,
            scenario = ppScenario)
-addDataset(tier0Config,"HcalNZS25ns",
+addDataset(tier0Config, "HcalNZS25ns",
            do_reco = True,
            scenario = hcalnzsScenario)
-addDataset(tier0Config,"MinimumBias25ns",
+addDataset(tier0Config, "MinimumBias25ns",
            do_reco = True,
            scenario = ppScenario)
-addDataset(tier0Config,"SingleMu25ns",
+addDataset(tier0Config, "SingleMu25ns",
            do_reco = True,
            scenario = ppScenario)
 
@@ -441,6 +436,8 @@ addExpressConfig(tier0Config, "HIExpress",
                  maxLatency = 15 * 23,
                  periodicHarvestInterval = 20 * 60,
                  blockCloseDelay = 1200,
+                 timePerEvent = 4,
+                 sizePerEvent = 1700,
                  versionOverride = expressVersionOverride)
 
 addExpressConfig(tier0Config, "Express",
@@ -459,6 +456,8 @@ addExpressConfig(tier0Config, "Express",
                  maxLatency = 15 * 23,
                  periodicHarvestInterval = 20 * 60,
                  blockCloseDelay = 1200,
+                 timePerEvent = 4,
+                 sizePerEvent = 1700,
                  versionOverride = expressVersionOverride)
 
 addExpressConfig(tier0Config, "ExpressCosmics",
@@ -477,16 +476,9 @@ addExpressConfig(tier0Config, "ExpressCosmics",
                  maxLatency = 15 * 23,
                  periodicHarvestInterval = 20 * 60,
                  blockCloseDelay = 1200,
+                 timePerEvent = 4,
+                 sizePerEvent = 1700,
                  versionOverride = expressVersionOverride)
-
-#addExpressConfig(tier0Config, "HLTMON",
-#                 scenario = ppScenario,
-#                 data_tiers = [ "FEVTHLTALL" ],
-#                 write_dqm = True,
-#                 global_tag = hltmonGlobalTag,
-#                 proc_ver = expressProcVersion,
-#                 blockCloseDelay = 1200,
-#                 versionOverride = hltmonVersionOverride)
 
 #######################
 ### ignored streams ###
@@ -496,6 +488,7 @@ ignoreStream(tier0Config, "Error")
 ignoreStream(tier0Config, "HLTMON")
 ignoreStream(tier0Config, "EventDisplay")
 ignoreStream(tier0Config, "DQM")
+ignoreStream(tier0Config, "DQMEventDisplay")
 ignoreStream(tier0Config, "LookArea")
 
 ###################################
@@ -518,4 +511,4 @@ ignoreStream(tier0Config, "LookArea")
 ##                    conv_type = "streamer")
 
 if __name__ == '__main__':
-    print tier0Config
+    print(tier0Config)

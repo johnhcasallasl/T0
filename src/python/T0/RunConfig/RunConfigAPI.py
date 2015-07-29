@@ -21,6 +21,27 @@ from T0.WMSpec.StdSpecs.Repack import RepackWorkloadFactory
 from T0.WMSpec.StdSpecs.Express import ExpressWorkloadFactory
 from WMCore.WMSpec.StdSpecs.PromptReco import PromptRecoWorkloadFactory
 
+def extractConfigParameter(configParameter, era, run):
+    """
+    _extractConfigParameter_
+
+    Checks if configParameter is era or run dependent. If it is, use the
+    provided era and run information to extract the correct parameter.
+    """
+    if isinstance(configParameter, dict):
+        if 'acqEra' in configParameter and era in configParameter['acqEra']:
+            return configParameter['acqEra'][era]
+        elif 'maxRun' in configParameter:
+            newConfigParameter = None
+            for maxRun in sorted(configParameter['maxRun'].keys()):
+                if run <= maxRun:
+                    newConfigParameter = configParameter['maxRun'][maxRun]
+            if newConfigParameter:
+                return newConfigParameter
+        return configParameter['default']
+    else:
+        return configParameter
+
 def configureRun(tier0Config, run, hltConfig, referenceHltConfig = None):
     """
     _configureRun_
@@ -57,18 +78,14 @@ def configureRun(tier0Config, run, hltConfig, referenceHltConfig = None):
         insertDatasetTriggerDAO = daoFactory(classname = "RunConfig.InsertDatasetTrigger")
 
         bindsStorageNode = []
-        for node in list(set([tier0Config.Global.BulkInjectNode,
-                              tier0Config.Global.ExpressInjectNode,
-                              tier0Config.Global.ExpressSubscribeNode])):
-            bindsStorageNode.append( { 'NODE' : node } )
+        if tier0Config.Global.ExpressSubscribeNode:
+            bindsStorageNode.append( { 'NODE' : tier0Config.Global.ExpressSubscribeNode } )
 
         bindsUpdateRun = { 'RUN' : run,
                            'PROCESS' : hltConfig['process'],
                            'ACQERA' : tier0Config.Global.AcquisitionEra,
                            'BACKFILL' : tier0Config.Global.Backfill,
                            'BULKDATATYPE' : tier0Config.Global.BulkDataType,
-                           'BULK_INJECT' : tier0Config.Global.BulkInjectNode,
-                           'EXPRESS_INJECT' : tier0Config.Global.ExpressInjectNode,
                            'EXPRESS_SUBSCRIBE' : tier0Config.Global.ExpressSubscribeNode,
                            'DQMUPLOADURL' : tier0Config.Global.DQMUploadUrl,
                            'AHTIMEOUT' : tier0Config.Global.AlcaHarvestTimeout,
@@ -107,7 +124,8 @@ def configureRun(tier0Config, run, hltConfig, referenceHltConfig = None):
 
         try:
             myThread.transaction.begin()
-            insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsStorageNode) > 0:
+                insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
             updateRunDAO.execute(bindsUpdateRun, conn = myThread.transaction.conn, transaction = True)
             insertStreamDAO.execute(bindsStream, conn = myThread.transaction.conn, transaction = True)
             insertDatasetDAO.execute(bindsDataset, conn = myThread.transaction.conn, transaction = True)
@@ -188,6 +206,8 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             if len(datasets) == 0:
                 raise RuntimeError("Stream is not defined in HLT menu or has no datasets !")
 
+        # write run/stream processing completion record
+        insertRunStreamDoneDAO = daoFactory(classname = "RunConfig.InsertRunStreamDone")
 
         # write stream/dataset mapping (for special express and error datasets)
         insertDatasetDAO = daoFactory(classname = "RunConfig.InsertPrimaryDataset")
@@ -207,6 +227,8 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
         insertStorageNodeDAO = daoFactory(classname = "RunConfig.InsertStorageNode")
         insertPhEDExConfigDAO = daoFactory(classname = "RunConfig.InsertPhEDExConfig")
 
+        bindsRunStreamDone = {'RUN' : run,
+                              'STREAM' : stream}
         bindsCMSSWVersion = []
         bindsDataset = []
         bindsStreamDataset = []
@@ -251,6 +273,9 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             streamConfig.Repack.ScramArch = tier0Config.Global.ScramArches.get(streamConfig.Repack.CMSSWVersion,
                                                                                tier0Config.Global.DefaultScramArch)
 
+            # check for era or run dependent config parameters
+            streamConfig.Repack.ProcessingVersion = extractConfigParameter(streamConfig.Repack.ProcessingVersion, runInfo['acq_era'], run)
+
             bindsRepackConfig = { 'RUN' : run,
                                   'STREAM' : stream,
                                   'PROC_VER': streamConfig.Repack.ProcessingVersion,
@@ -284,17 +309,21 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                               'eventContent' : tier0Config.Global.DQMDataTier,
                                               'primaryDataset' : specialDataset } )
 
-            bindsPhEDExConfig.append( { 'RUN' : run,
-                                        'PRIMDS' : specialDataset,
-                                        'ARCHIVAL_NODE' : None,
-                                        'TAPE_NODE' : None,
-                                        'DISK_NODE' :  runInfo['express_subscribe']} )
+            if runInfo['express_subscribe']:
 
-            subscriptions.append( { 'custodialSites' : [],
-                                    'nonCustodialSites' : [ runInfo['express_subscribe'] ],
-                                    'autoApproveSites' : [ runInfo['express_subscribe'] ],
-                                    'priority' : "high",
-                                    'primaryDataset' : specialDataset } )
+                bindsPhEDExConfig.append( { 'RUN' : run,
+                                            'PRIMDS' : specialDataset,
+                                            'ARCHIVAL_NODE' : None,
+                                            'TAPE_NODE' : None,
+                                            'DISK_NODE' :  runInfo['express_subscribe']} )
+
+                subscriptions.append( { 'nonCustodialSites' : [ runInfo['express_subscribe'] ],
+                                        'nonCustodialSubType' : "Replica",
+                                        'nonCustodialGroup' : "express",
+                                        'autoApproveSites' : [ runInfo['express_subscribe'] ],
+                                        'priority' : "high",
+                                        'primaryDataset' : specialDataset,
+                                        'deleteFromSource' : bool(runInfo['express_subscribe']) } )
 
             alcaSkim = None
             if len(streamConfig.Express.AlcaSkims) > 0:
@@ -327,10 +356,17 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             streamConfig.Express.RecoScramArch = None
             if streamConfig.Express.RecoCMSSWVersion != None:
 
+                # check for era or run dependent config parameters
+                streamConfig.Express.RecoCMSSWVersion = extractConfigParameter(streamConfig.Express.RecoCMSSWVersion, runInfo['acq_era'], run)
+
                 bindsCMSSWVersion.append( { 'VERSION' : streamConfig.Express.RecoCMSSWVersion } )
 
                 streamConfig.Express.RecoScramArch = tier0Config.Global.ScramArches.get(streamConfig.Express.RecoCMSSWVersion,
                                                                                         tier0Config.Global.DefaultScramArch)
+
+            # check for era or run dependent config parameters
+            streamConfig.Express.GlobalTag = extractConfigParameter(streamConfig.Express.GlobalTag, runInfo['acq_era'], run)
+            streamConfig.Express.ProcessingVersion = extractConfigParameter(streamConfig.Express.ProcessingVersion, runInfo['acq_era'], run)
 
             bindsExpressConfig = { 'RUN' : run,
                                    'STREAM' : stream,
@@ -374,53 +410,60 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                               'selectEvents' : selectEvents,
                                               'primaryDataset' : dataset } )
 
-                bindsPhEDExConfig.append( { 'RUN' : run,
-                                            'PRIMDS' : dataset,
-                                            'ARCHIVAL_NODE' : datasetConfig.ArchivalNode,
-                                            'TAPE_NODE' : datasetConfig.TapeNode,
-                                            'DISK_NODE' : datasetConfig.DiskNode } )
+                if datasetConfig.ArchivalNode or datasetConfig.TapeNode or datasetConfig.DiskNode:
+
+                    bindsPhEDExConfig.append( { 'RUN' : run,
+                                                'PRIMDS' : dataset,
+                                                'ARCHIVAL_NODE' : datasetConfig.ArchivalNode,
+                                                'TAPE_NODE' : datasetConfig.TapeNode,
+                                                'DISK_NODE' : datasetConfig.DiskNode } )
 
                 custodialSites = []
                 nonCustodialSites = []
-                autoApproveSites = []
-                if datasetConfig.ArchivalNode != None:
+                custodialAutoApproveSites = []
+                nonCustodialAutoApproveSites = []
+                if datasetConfig.ArchivalNode:
                     bindsStorageNode.append( { 'NODE' : datasetConfig.ArchivalNode } )
                     custodialSites.append(datasetConfig.ArchivalNode)
-                    autoApproveSites.append(datasetConfig.ArchivalNode)
-                if datasetConfig.TapeNode != None:
+                    custodialAutoApproveSites.append(datasetConfig.ArchivalNode)
+                if datasetConfig.TapeNode:
                     bindsStorageNode.append( { 'NODE' : datasetConfig.TapeNode } )
                     custodialSites.append(datasetConfig.TapeNode)
-                if datasetConfig.DiskNode != None:
+                if datasetConfig.DiskNode and datasetConfig.RAWtoDisk:
                     bindsStorageNode.append( { 'NODE' : datasetConfig.DiskNode } )
                     nonCustodialSites.append(datasetConfig.DiskNode)
-                    autoApproveSites.append(datasetConfig.DiskNode)
+                    nonCustodialAutoApproveSites.append(datasetConfig.DiskNode)
 
-                if len(custodialSites) > 0 or len(nonCustodialSites) > 0:
+                if len(custodialSites) > 0:
                     subscriptions.append( { 'custodialSites' : custodialSites,
                                             'custodialSubType' : "Replica",
-                                            'nonCustodialSites' : nonCustodialSites,
-                                            'autoApproveSites' : autoApproveSites,
+                                            'custodialGroup' : "DataOps",
+                                            'autoApproveSites' : custodialAutoApproveSites,
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
+                                            'dataTier' : "RAW" } )
+                if len(nonCustodialSites) > 0:
+                    subscriptions.append( { 'nonCustodialSites' : nonCustodialSites,
+                                            'nonCustodialSubType' : "Replica",
+                                            'nonCustodialGroup' : "AnalysisOps",
+                                            'autoApproveSites' : nonCustodialAutoApproveSites,
+                                            'priority' : "high",
+                                            'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : "RAW" } )
 
                 #
                 # set subscriptions for error dataset
                 #
-                custodialSites = []
-                nonCustodialSites = []
-                autoApproveSites = []
                 if datasetConfig.ArchivalNode != None:
-                    custodialSites.append(datasetConfig.ArchivalNode)
-                    autoApproveSites.append(datasetConfig.ArchivalNode)
-
-                if len(custodialSites) > 0 or len(nonCustodialSites) > 0:
-                    subscriptions.append( { 'custodialSites' : custodialSites,
+                    subscriptions.append( { 'custodialSites' : [ datasetConfig.ArchivalNode ],
                                             'custodialSubType' : "Replica",
-                                            'nonCustodialSites' : nonCustodialSites,
-                                            'autoApproveSites' : autoApproveSites,
+                                            'custodialGroup' : "DataOps",
+                                            'autoApproveSites' : [ datasetConfig.ArchivalNode ],
                                             'priority' : "high",
                                             'primaryDataset' : "%s-Error" % dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : "RAW" } )
 
 
@@ -434,17 +477,21 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                                       'selectEvents' : selectEvents,
                                                       'primaryDataset' : dataset } )
 
-                bindsPhEDExConfig.append( { 'RUN' : run,
-                                            'PRIMDS' : dataset,
-                                            'ARCHIVAL_NODE' : None,
-                                            'TAPE_NODE' : None,
-                                            'DISK_NODE' : runInfo['express_subscribe'] } )
+                if runInfo['express_subscribe']:
 
-                subscriptions.append( { 'custodialSites' : [],
-                                        'nonCustodialSites' : [ runInfo['express_subscribe'] ],
-                                        'autoApproveSites' : [ runInfo['express_subscribe'] ],
-                                        'priority' : "high",
-                                        'primaryDataset' : dataset } )
+                    bindsPhEDExConfig.append( { 'RUN' : run,
+                                                'PRIMDS' : dataset,
+                                                'ARCHIVAL_NODE' : None,
+                                                'TAPE_NODE' : None,
+                                                'DISK_NODE' : runInfo['express_subscribe'] } )
+
+                    subscriptions.append( { 'nonCustodialSites' : [ runInfo['express_subscribe'] ],
+                                            'nonCustodialSubType' : "Replica",
+                                            'nonCustodialGroup' : "express",
+                                            'autoApproveSites' : [ runInfo['express_subscribe'] ],
+                                            'priority' : "high",
+                                            'primaryDataset' : dataset,
+                                            'deleteFromSource' : bool(runInfo['express_subscribe']) } )
 
         #
         # finally create WMSpec
@@ -457,16 +504,14 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
 
             specArguments = {}
 
-            specArguments['TimePerEvent'] = 1
-            specArguments['SizePerEvent'] = 200
             specArguments['Memory'] = 1000
 
             specArguments['RequestPriority'] = tier0Config.Global.BaseRequestPriority + 5000
 
             specArguments['CMSSWVersion'] = streamConfig.Repack.CMSSWVersion
             specArguments['ScramArch'] = streamConfig.Repack.ScramArch
-
             specArguments['ProcessingVersion'] = streamConfig.Repack.ProcessingVersion
+
             specArguments['MaxSizeSingleLumi'] = streamConfig.Repack.MaxSizeSingleLumi
             specArguments['MaxSizeMultiLumi'] = streamConfig.Repack.MaxSizeMultiLumi
             specArguments['MinInputSize'] = streamConfig.Repack.MinInputSize
@@ -475,6 +520,11 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             specArguments['MaxOverSize'] = streamConfig.Repack.MaxOverSize
             specArguments['MaxInputEvents'] = streamConfig.Repack.MaxInputEvents
             specArguments['MaxInputFiles'] = streamConfig.Repack.MaxInputFiles
+            specArguments['MaxLatency'] = streamConfig.Repack.MaxLatency
+
+            # parameters for repack direct to merge stageout
+            specArguments['MinMergeSize'] = streamConfig.Repack.MinInputSize
+            specArguments['MaxMergeEvents'] = streamConfig.Repack.MaxInputEvents
 
             specArguments['UnmergedLFNBase'] = "/store/unmerged/%s" % runInfo['bulk_data_type']
             if runInfo['backfill']:
@@ -492,13 +542,21 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
 
             specArguments = {}
 
-            specArguments['TimePerEvent'] = 12
-            specArguments['SizePerEvent'] = 512
-            specArguments['Memory'] = 2500
+            specArguments['TimePerEvent'] = streamConfig.Express.TimePerEvent
+            specArguments['SizePerEvent'] = streamConfig.Express.SizePerEvent
+
+            if streamConfig.Express.Scenario == "HeavyIonsRun2":
+                baseMemory = 3000
+                perCoreMemory = 1300
+            else:
+                baseMemory = 2000
+                perCoreMemory = 900
+
+            specArguments['Memory'] = baseMemory + perCoreMemory
 
             if streamConfig.Express.Multicore:
                 specArguments['Multicore'] = streamConfig.Express.Multicore
-                specArguments['Memory'] = 2500 + (streamConfig.Express.Multicore - 1) * 500
+                specArguments['Memory'] += (streamConfig.Express.Multicore - 1) * perCoreMemory
 
             specArguments['RequestPriority'] = tier0Config.Global.BaseRequestPriority + 10000
 
@@ -521,7 +579,7 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             specArguments['MaxInputFiles'] = streamConfig.Express.MaxInputFiles
             specArguments['MaxLatency'] = streamConfig.Express.MaxLatency
             specArguments['AlcaSkims'] = streamConfig.Express.AlcaSkims
-            specArguments['DqmSequences'] = streamConfig.Express.DqmSequences
+            specArguments['DQMSequences'] = streamConfig.Express.DqmSequences
             specArguments['AlcaHarvestTimeout'] = runInfo['ah_timeout']
             specArguments['AlcaHarvestDir'] = runInfo['ah_dir']
             specArguments['DQMUploadProxy'] = dqmUploadProxy
@@ -545,7 +603,6 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             specArguments['RunNumber'] = run
             specArguments['AcquisitionEra'] = runInfo['acq_era']
             specArguments['Outputs'] = outputModuleDetails
-            specArguments['OverrideCatalog'] = "trivialcatalog_file:/cvmfs/cms.cern.ch/SITECONF/T2_CH_CERN/Tier0/override_catalog.xml?protocol=override"
             specArguments['ValidStatus'] = "VALID"
 
             specArguments['SiteWhitelist'] = [ tier0Config.Global.ProcessingSite ]
@@ -554,13 +611,11 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
         if streamConfig.ProcessingStyle == "Bulk":
             factory = RepackWorkloadFactory()
             wmSpec = factory.factoryWorkloadConstruction(workflowName, specArguments)
-            #wmSpec.setPhEDExInjectionOverride(runInfo['bulk_inject'])
             for subscription in subscriptions:
                 wmSpec.setSubscriptionInformation(**subscription)
         elif streamConfig.ProcessingStyle == "Express":
             factory = ExpressWorkloadFactory()
             wmSpec = factory.factoryWorkloadConstruction(workflowName, specArguments)
-            #wmSpec.setPhEDExInjectionOverride(runInfo['express_inject'])
             for subscription in subscriptions:
                 wmSpec.setSubscriptionInformation(**subscription)
 
@@ -569,8 +624,10 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                    { 'vogroup': 'DEFAULT', 'vorole': 'DEFAULT',
                                      'dn' : "Dirk.Hufnagel@cern.ch" } )
 
-            wmSpec.setupPerformanceMonitoring(maxRSS = 10485760, maxVSize = 10485760,
-                                              softTimeout = 604800, gracePeriod = 3600)
+            wmSpec.setupPerformanceMonitoring(maxRSS = 1024 * specArguments['Memory'] + 10,
+                                              maxVSize = 104857600, #100GB, effectively disabled
+                                              softTimeout = 604800, #7 days, effectively disabled
+                                              gracePeriod = 3600)
 
             wmbsHelper = WMBSHelper(wmSpec, taskName, cachepath = specDirectory)
 
@@ -602,6 +659,7 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                 insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
             if len(bindsPhEDExConfig) > 0:
                 insertPhEDExConfigDAO.execute(bindsPhEDExConfig, conn = myThread.transaction.conn, transaction = True)
+            insertRunStreamDoneDAO.execute(bindsRunStreamDone, conn = myThread.transaction.conn, transaction = True)
             insertStreamStyleDAO.execute(bindsStreamStyle, conn = myThread.transaction.conn, transaction = True)
             if streamConfig.ProcessingStyle in [ 'Bulk', 'Express' ]:
                 insertStreamFilesetDAO.execute(run, stream, filesetName, conn = myThread.transaction.conn, transaction = True)
@@ -635,8 +693,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
     Called by Tier0Feeder
 
     Finds all run/primds that need to be released for PromptReco
-    ( run.end_time + reco_release_config.delay > now
-      AND run.end_time > 0 )
+    ( run.stop_time + reco_release_config.delay > now AND run.stop_time > 0 )
 
     Create workflows and subscriptions for the processing
     of runs/datasets.
@@ -659,27 +716,11 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
     releasePromptRecoDAO = daoFactory(classname = "RunConfig.ReleasePromptReco")
     insertWorkflowMonitoringDAO = daoFactory(classname = "RunConfig.InsertWorkflowMonitoring")
 
-    bindsDatasetScenario = []
-    bindsCMSSWVersion = []
-    bindsRecoConfig = []
-    bindsStorageNode = []
-    bindsReleasePromptReco = []
-
     # mark workflows as injected
     wmbsDaoFactory = DAOFactory(package = "WMCore.WMBS",
                                 logger = logging,
                                 dbinterface = myThread.dbi)
     markWorkflowsInjectedDAO   = wmbsDaoFactory(classname = "Workflow.MarkInjectedWorkflows")
-
-    #
-    # for creating PromptReco specs
-    #
-    recoSpecs = {}
-
-    #
-    # for PhEDEx subscription settings
-    #
-    subscriptions = []
 
     #
     # handle PromptReco release for datasets
@@ -693,6 +734,18 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
     recoRelease = findRecoReleaseDAO.execute(datasetDelays, transaction = False)
     for run in sorted(recoRelease.keys()):
+
+        # for creating PromptReco specs
+        recoSpecs = {}
+
+        # for PhEDEx subscription settings
+        subscriptions = []
+
+        bindsDatasetScenario = []
+        bindsCMSSWVersion = []
+        bindsRecoConfig = []
+        bindsStorageNode = []
+        bindsReleasePromptReco = []
 
         # retrieve some basic run information
         getRunInfoDAO = daoFactory(classname = "RunConfig.GetRunInfo")
@@ -714,12 +767,20 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                            'PRIMDS' : dataset,
                                            'SCENARIO' : datasetConfig.Scenario } )
 
-            if datasetConfig.CMSSWVersion != None:
-                bindsCMSSWVersion.append( { 'VERSION' : datasetConfig.CMSSWVersion } )
+            # check for era or run dependent config parameters
+            datasetConfig.CMSSWVersion = extractConfigParameter(datasetConfig.CMSSWVersion, runInfo['acq_era'], run)
+            datasetConfig.GlobalTag = extractConfigParameter(datasetConfig.GlobalTag, runInfo['acq_era'], run)
+            datasetConfig.ProcessingVersion = extractConfigParameter(datasetConfig.ProcessingVersion, runInfo['acq_era'], run)
+
+            bindsCMSSWVersion.append( { 'VERSION' : datasetConfig.CMSSWVersion } )
 
             alcaSkim = None
             if len(datasetConfig.AlcaSkims) > 0:
                 alcaSkim = ",".join(datasetConfig.AlcaSkims)
+
+            physicsSkim = None
+            if len(datasetConfig.PhysicsSkims) > 0:
+                physicsSkim = ",".join(datasetConfig.PhysicsSkims)
 
             dqmSeq = None
             if len(datasetConfig.DqmSequences) > 0:
@@ -738,6 +799,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                       'WRITE_MINIAOD' : int(datasetConfig.WriteMINIAOD),
                                       'PROC_VER' : datasetConfig.ProcessingVersion,
                                       'ALCA_SKIM' : alcaSkim,
+                                      'PHYSICS_SKIM' : physicsSkim,
                                       'DQM_SEQ' : dqmSeq,
                                       'BLOCK_DELAY' : datasetConfig.BlockCloseDelay,
                                       'CMSSW' : datasetConfig.CMSSWVersion,
@@ -745,101 +807,118 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                       'MULTICORE' : datasetConfig.Multicore,
                                       'GLOBAL_TAG' : datasetConfig.GlobalTag } )
 
-            phedexConfig = phedexConfigs[dataset]
+            # check if the dataset has any phedex config
+            if dataset in phedexConfigs:
 
-            # do things different based on whether we have TapeNode/DiskNode or ArchivalNode
-            if phedexConfig['tape_node'] != None and phedexConfig['disk_node'] != None:
+                phedexConfig = phedexConfigs[dataset]
 
-                if datasetConfig.WriteAOD:
-                    subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
-                                            'custodialSubType' : "Replica",
-                                            'nonCustodialSites' : [phedexConfig['disk_node']],
-                                            'autoApproveSites' : [phedexConfig['disk_node']],
-                                            'priority' : "high",
-                                            'primaryDataset' : dataset,
-                                            'dataTier' : "AOD" } )
-
-                if datasetConfig.WriteMINIAOD:
-                    subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
-                                            'custodialSubType' : "Replica",
-                                            'nonCustodialSites' : [phedexConfig['disk_node']],
-                                            'autoApproveSites' : [phedexConfig['disk_node']],
-                                            'priority' : "high",
-                                            'primaryDataset' : dataset,
-                                            'dataTier' : "MINIAOD" } )
-
-                if len(datasetConfig.AlcaSkims) > 0:
-                    subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
-                                            'custodialSubType' : "Replica",
-                                            'nonCustodialSites' : [],
-                                            'autoApproveSites' : [],
-                                            'priority' : "high",
-                                            'primaryDataset' : dataset,
-                                            'dataTier' : "ALCARECO" } )
-
-                if datasetConfig.WriteDQM:
-                    subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
-                                            'custodialSubType' : "Replica",
-                                            'nonCustodialSites' : [],
-                                            'autoApproveSites' : [],
-                                            'priority' : "high",
-                                            'primaryDataset' : dataset,
-                                            'dataTier' : tier0Config.Global.DQMDataTier } )
+                tapeDataTiers = set()
+                diskDataTiers = set()
+                skimDataTiers = set()
+                alcaDataTiers = set()
 
                 if datasetConfig.WriteRECO:
-                    subscriptions.append( { 'custodialSites' : [],
-                                            'nonCustodialSites' : [phedexConfig['disk_node']],
-                                            'autoApproveSites' : [phedexConfig['disk_node']],
-                                            'priority' : "high",
-                                            'primaryDataset' : dataset,
-                                            'dataTier' : "RECO" } )
+                    diskDataTiers.add("RECO")
+                if datasetConfig.WriteAOD:
+                    tapeDataTiers.add("AOD")
+                    diskDataTiers.add("AOD")
+                if datasetConfig.WriteMINIAOD:
+                    tapeDataTiers.add("MINIAOD")
+                    diskDataTiers.add("MINIAOD")
+                if datasetConfig.WriteDQM:
+                    tapeDataTiers.add(tier0Config.Global.DQMDataTier)
+                if len(datasetConfig.PhysicsSkims) > 0:
+                    skimDataTiers.add("RAW-RECO")
+                    skimDataTiers.add("USER")
+                    skimDataTiers.add("RECO")
+                    skimDataTiers.add("AOD")
+                if len(datasetConfig.AlcaSkims) > 0:
+                    alcaDataTiers.add("ALCARECO")
 
-            elif phedexConfig['archival_node'] != None:
+                # do things different based on whether we have TapeNode/DiskNode, only TapeNode or ArchivalNode
+                if phedexConfig['tape_node'] != None:
 
-                    if datasetConfig.WriteAOD:
+                    if phedexConfig['disk_node'] == None:
+                        diskDataTiers = set()
+
+                    for dataTier in tapeDataTiers & diskDataTiers:
+                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
+                                                'custodialSubType' : "Replica",
+                                                'custodialGroup' : "DataOps",
+                                                'nonCustodialSites' : [phedexConfig['disk_node']],
+                                                'nonCustodialSubType' : "Replica",
+                                                'nonCustodialGroup' : "AnalysisOps",
+                                                'autoApproveSites' : [phedexConfig['disk_node']],
+                                                'priority' : "high",
+                                                'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : False,
+                                                'deleteFromSource' : True,
+                                                'dataTier' : dataTier } )
+
+                    for dataTier in skimDataTiers:
+                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
+                                                'custodialSubType' : "Replica",
+                                                'custodialGroup' : "DataOps",
+                                                'nonCustodialSites' : [phedexConfig['disk_node']] if phedexConfig['disk_node'] else [],
+                                                'nonCustodialSubType' : "Replica",
+                                                'nonCustodialGroup' : "AnalysisOps",
+                                                'autoApproveSites' : [phedexConfig['disk_node']] if phedexConfig['disk_node'] else [],
+                                                'priority' : "high",
+                                                'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : True,
+                                                'deleteFromSource' : True,
+                                                'dataTier' : dataTier } )
+
+                    for dataTier in tapeDataTiers - diskDataTiers:
+                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
+                                                'custodialSubType' : "Replica",
+                                                'custodialGroup' : "DataOps",
+                                                'autoApproveSites' : [],
+                                                'priority' : "high",
+                                                'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : False,
+                                                'deleteFromSource' : True,
+                                                'dataTier' : dataTier } )
+
+                    for dataTier in alcaDataTiers:
+                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
+                                                'custodialSubType' : "Replica",
+                                                'custodialGroup' : "DataOps",
+                                                'autoApproveSites' : [],
+                                                'priority' : "high",
+                                                'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : True,
+                                                'deleteFromSource' : True,
+                                                'dataTier' : dataTier } )
+
+                    for dataTier in diskDataTiers - tapeDataTiers:
+                        subscriptions.append( { 'nonCustodialSites' : [phedexConfig['disk_node']],
+                                                'nonCustodialSubType' : "Replica",
+                                                'nonCustodialGroup' : "AnalysisOps",
+                                                'autoApproveSites' : [phedexConfig['disk_node']],
+                                                'priority' : "high",
+                                                'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : False,
+                                                'deleteFromSource' : True,
+                                                'dataTier' : dataTier } )
+
+                elif phedexConfig['archival_node'] != None:
+
+                    for dataTier in tapeDataTiers | diskDataTiers | skimDataTiers | alcaDataTiers:
+
                         subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
                                                 'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
+                                                'custodialGroup' : "DataOps",
                                                 'autoApproveSites' : [phedexConfig['archival_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
-                                                'dataTier' : "AOD" } )
-
-                    if datasetConfig.WriteMINIAOD:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'dataTier' : "MINIAOD" } )
-
-                    if len(datasetConfig.AlcaSkims) > 0:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'dataTier' : "ALCARECO" } )
-
-                    if datasetConfig.WriteDQM:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'dataTier' : tier0Config.Global.DQMDataTier } )
-
-                    if datasetConfig.WriteRECO:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'dataTier' : "RECO" } )
+                                                'deleteFromSource' : True,
+                                                'dataTier' : dataTier } )
 
             writeTiers = []
             if datasetConfig.WriteRECO:
@@ -863,13 +942,23 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 specArguments = {}
 
-                specArguments['TimePerEvent'] = 12
-                specArguments['SizePerEvent'] = 512
-                specArguments['Memory'] = 2500
+                specArguments['TimePerEvent'] = datasetConfig.TimePerEvent
+                specArguments['SizePerEvent'] = datasetConfig.SizePerEvent
+
+                if datasetConfig.Scenario == "HeavyIonsRun2":
+                    baseMemory = 3000
+                    perCoreMemory = 1300
+                else:
+                    baseMemory = 2000
+                    perCoreMemory = 900
+
+                specArguments['Memory'] = baseMemory + perCoreMemory
 
                 if datasetConfig.Multicore:
                     specArguments['Multicore'] = datasetConfig.Multicore
-                    specArguments['Memory'] = 2500 + (datasetConfig.Multicore - 1) * 500
+                    specArguments['Memory'] += (datasetConfig.Multicore - 1) * perCoreMemory
+
+                specArguments['Memory'] += len(datasetConfig.PhysicsSkims) * 100
 
                 specArguments['RequestPriority'] = tier0Config.Global.BaseRequestPriority
 
@@ -882,6 +971,8 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                 specArguments['SplittingAlgo'] = "EventAwareLumiBased"
                 specArguments['EventsPerJob'] = datasetConfig.RecoSplit
 
+                specArguments['RobustMerge'] = False
+
                 specArguments['ProcessingString'] = "PromptReco"
                 specArguments['ProcessingVersion'] = datasetConfig.ProcessingVersion
                 specArguments['Scenario'] = datasetConfig.Scenario
@@ -893,7 +984,8 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 specArguments['WriteTiers'] = writeTiers
                 specArguments['AlcaSkims'] = datasetConfig.AlcaSkims
-                specArguments['DqmSequences'] = datasetConfig.DqmSequences
+                specArguments['PhysicsSkims'] = datasetConfig.PhysicsSkims
+                specArguments['DQMSequences'] = datasetConfig.DqmSequences
 
                 specArguments['UnmergedLFNBase'] = "/store/unmerged/%s" % runInfo['bulk_data_type']
                 if runInfo['backfill']:
@@ -916,8 +1008,6 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 factory = PromptRecoWorkloadFactory()
                 wmSpec = factory.factoryWorkloadConstruction(workflowName, specArguments)
-
-                #wmSpec.setPhEDExInjectionOverride(runInfo['bulk_inject'])
                 for subscription in subscriptions:
                     wmSpec.setSubscriptionInformation(**subscription)
 
@@ -925,35 +1015,37 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                        { 'vogroup': 'DEFAULT', 'vorole': 'DEFAULT',
                                          'dn' : "Dirk.Hufnagel@cern.ch" } )
 
-                wmSpec.setupPerformanceMonitoring(maxRSS = 10485760, maxVSize = 10485760,
-                                                  softTimeout = 604800, gracePeriod = 3600)
+                wmSpec.setupPerformanceMonitoring(maxRSS = 1024 * specArguments['Memory'] + 10,
+                                                  maxVSize = 104857600, #100GB, effectively disabled
+                                                  softTimeout = 604800, #7 days, effectively disabled
+                                                  gracePeriod = 3600)
 
                 wmbsHelper = WMBSHelper(wmSpec, taskName, cachepath = specDirectory)
 
                 recoSpecs[workflowName] = (wmbsHelper, wmSpec, fileset)
 
-    try:
-        myThread.transaction.begin()
-        if len(bindsDatasetScenario) > 0:
-            insertDatasetScenarioDAO.execute(bindsDatasetScenario, conn = myThread.transaction.conn, transaction = True)
-        if len(bindsCMSSWVersion) > 0:
-            insertCMSSWVersionDAO.execute(bindsCMSSWVersion, conn = myThread.transaction.conn, transaction = True)
-        if len(bindsRecoConfig) > 0:
-            insertRecoConfigDAO.execute(bindsRecoConfig, conn = myThread.transaction.conn, transaction = True)
-        if len(bindsStorageNode) > 0:
-            insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
-        if len(bindsReleasePromptReco) > 0:
-            releasePromptRecoDAO.execute(bindsReleasePromptReco, conn = myThread.transaction.conn, transaction = True)
-        for (wmbsHelper, wmSpec, fileset) in recoSpecs.values():
-            wmbsHelper.createSubscription(wmSpec.getTask(taskName), Fileset(id = fileset), alternativeFilesetClose = True)
-            insertWorkflowMonitoringDAO.execute([fileset],  conn = myThread.transaction.conn, transaction = True)
-        if len(recoSpecs) > 0:
-            markWorkflowsInjectedDAO.execute(recoSpecs.keys(), injected = True, conn = myThread.transaction.conn, transaction = True)
-    except Exception as ex:
-        logging.exception(ex)
-        myThread.transaction.rollback()
-        raise RuntimeError("Problem in releasePromptReco() database transaction !")
-    else:
-        myThread.transaction.commit()
+        try:
+            myThread.transaction.begin()
+            if len(bindsDatasetScenario) > 0:
+                insertDatasetScenarioDAO.execute(bindsDatasetScenario, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsCMSSWVersion) > 0:
+                insertCMSSWVersionDAO.execute(bindsCMSSWVersion, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsRecoConfig) > 0:
+                insertRecoConfigDAO.execute(bindsRecoConfig, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsStorageNode) > 0:
+                insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsReleasePromptReco) > 0:
+                releasePromptRecoDAO.execute(bindsReleasePromptReco, conn = myThread.transaction.conn, transaction = True)
+            for (wmbsHelper, wmSpec, fileset) in recoSpecs.values():
+                wmbsHelper.createSubscription(wmSpec.getTask(taskName), Fileset(id = fileset), alternativeFilesetClose = True)
+                insertWorkflowMonitoringDAO.execute([fileset],  conn = myThread.transaction.conn, transaction = True)
+            if len(recoSpecs) > 0:
+                markWorkflowsInjectedDAO.execute(recoSpecs.keys(), injected = True, conn = myThread.transaction.conn, transaction = True)
+        except Exception as ex:
+            logging.exception(ex)
+            myThread.transaction.rollback()
+            raise RuntimeError("Problem in releasePromptReco() database transaction !")
+        else:
+            myThread.transaction.commit()
 
     return

@@ -55,17 +55,9 @@ class Create(DBCreator):
         self.create[len(self.create)] = \
             """CREATE TABLE event_scenario (
                  id     int          not null,
-                 name   varchar2(25) not null,
+                 name   varchar2(50) not null,
                  primary key(id),
                  constraint eve_sce_name_uq unique(name)
-               ) ORGANIZATION INDEX"""
-
-        self.create[len(self.create)] = \
-            """CREATE TABLE data_tier (
-                 id     int          not null,
-                 name   varchar2(25) not null,
-                 primary key(id),
-                 constraint dat_tie_name_uq unique(name)
                ) ORGANIZATION INDEX"""
 
         self.create[len(self.create)] = \
@@ -116,15 +108,13 @@ class Create(DBCreator):
                  express_released   int           default 0 not null,
                  hltkey             varchar2(255) not null,
                  start_time         int           not null,
-                 end_time           int           default 0 not null,
+                 stop_time          int           default 0 not null,
                  close_time         int           default 0 not null,
                  lumicount          int           default 0 not null,
                  process            varchar2(255),
                  acq_era            varchar2(255),
                  backfill           varchar2(255),
                  bulk_data_type     varchar2(255),
-                 bulk_inject        int,
-                 express_inject     int,
                  express_subscribe  int,
                  dqmuploadurl       varchar2(255),
                  ah_timeout         int,
@@ -184,6 +174,14 @@ class Create(DBCreator):
                  constraint run_str_fil_ass_fil_uq unique(fileset)
                    using index
                      (create unique index idx_run_stream_fileset_assoc_1 on run_stream_fileset_assoc (fileset))
+               )"""
+
+        self.create[len(self.create)] = \
+            """CREATE TABLE run_stream_done (
+                 run_id      int not null,
+                 stream_id   int not null,
+                 in_datasvc  int default 0 not null,
+                 primary key(run_id, stream_id)
                )"""
 
         self.create[len(self.create)] = \
@@ -287,8 +285,8 @@ class Create(DBCreator):
                  reco_cmssw_id   int,
                  multicore       int,
                  reco_scram_arch varchar2(50),
-                 alca_skim       varchar2(1000),
-                 dqm_seq         varchar2(1000),
+                 alca_skim       varchar2(700),
+                 dqm_seq         varchar2(700),
                  primary key (run_id, stream_id)
                ) ORGANIZATION INDEX"""
 
@@ -327,8 +325,9 @@ class Create(DBCreator):
                  scram_arch     varchar2(50)   not null,
                  global_tag     varchar2(255)  not null,
                  multicore      int,
-                 alca_skim      varchar2(1000),
-                 dqm_seq        varchar2(1000),
+                 alca_skim      varchar2(700),
+                 physics_skim   varchar2(700),
+                 dqm_seq        varchar2(700),
                  primary key (run_id, primds_id)
                ) ORGANIZATION INDEX"""
 
@@ -348,6 +347,12 @@ class Create(DBCreator):
                  tracked    int default 0 not null,
                  closeout   int default 0 not null,  
                  primary key (workflow)
+               ) ORGANIZATION INDEX"""
+
+        self.create[len(self.create)] = \
+            """CREATE TABLE dataset_locked (
+                 dataset_id  int not null,
+                 primary key (dataset_id)
                ) ORGANIZATION INDEX"""
 
         self.create[len(self.create)] = \
@@ -435,6 +440,9 @@ class Create(DBCreator):
             """CREATE INDEX idx_run_primds_stream_1 ON run_primds_stream_assoc (run_id, stream_id)"""
 
         self.indexes[len(self.indexes)] = \
+            """CREATE INDEX idx_run_stream_done_1 ON run_stream_done (checkForZeroOneState(in_datasvc))"""
+
+        self.indexes[len(self.indexes)] = \
             """CREATE INDEX idx_reco_release_config_2 ON reco_release_config (checkForZeroOneState(in_datasvc))"""
 
         self.indexes[len(self.indexes)] = \
@@ -480,18 +488,6 @@ class Create(DBCreator):
                  ADD CONSTRAINT run_sta_fk
                  FOREIGN KEY (status)
                  REFERENCES run_status(id)"""
-
-        self.constraints[len(self.constraints)] = \
-            """ALTER TABLE run
-                 ADD CONSTRAINT run_bul_inj
-                 FOREIGN KEY (bulk_inject)
-                 REFERENCES storage_node(id)"""
-
-        self.constraints[len(self.constraints)] = \
-            """ALTER TABLE run
-                 ADD CONSTRAINT run_exp_inj
-                 FOREIGN KEY (express_inject)
-                 REFERENCES storage_node(id)"""
 
         self.constraints[len(self.constraints)] = \
             """ALTER TABLE run
@@ -607,6 +603,18 @@ class Create(DBCreator):
                  FOREIGN KEY (fileset)
                  REFERENCES wmbs_fileset(id)
                  ON DELETE CASCADE"""
+
+        self.constraints[len(self.constraints)] = \
+            """ALTER TABLE run_stream_done
+                 ADD CONSTRAINT run_str_don_run_id_fk
+                 FOREIGN KEY (run_id)
+                 REFERENCES run(run_id)"""
+
+        self.constraints[len(self.constraints)] = \
+            """ALTER TABLE run_stream_done
+                 ADD CONSTRAINT run_str_don_str_id_fk
+                 FOREIGN KEY (stream_id)
+                 REFERENCES stream(id)"""
 
         self.constraints[len(self.constraints)] = \
             """ALTER TABLE reco_release_config
@@ -810,6 +818,13 @@ class Create(DBCreator):
                  REFERENCES wmbs_workflow(id)
                  ON DELETE CASCADE"""
 
+        self.constraints[len(self.constraints)] = \
+            """ALTER TABLE dataset_locked
+                 ADD CONSTRAINT dat_loc
+                 FOREIGN KEY (dataset_id)
+                 REFERENCES dbsbuffer_dataset(id)
+                 ON DELETE CASCADE"""
+
         subTypes = ["Express", "Repack"]
         for name in subTypes:
             sql = """INSERT INTO wmbs_sub_types
@@ -864,24 +879,19 @@ class Create(DBCreator):
                            10 : "ppRun2",
                            11 : "cosmicsRun2",
                            12 : "hcalnzsRun2",
-                           13 : "ppRun2B0T" }
+                           13 : "ppRun2B0T",
+                           14 : "AlCa",
+                           15 : "ppRun2at50ns",
+                           16 : "HeavyIonsRun2",
+                           17 : "ppEra_Run2_25ns",
+                           18 : "cosmicsEra_Run2_25ns",
+                           19 : "hcalnzsEra_Run2_25ns",
+                           20 : "ppEra_Run2_2016",
+                           21 : "cosmicsEra_Run2_2016",
+                           22 : "hcalnzsEra_Run2_2016",
+                           23 : "ppEra_Run2_2016_trackingLowPU" }
         for id, name in eventScenarios.items():
             sql = """INSERT INTO event_scenario
-                     (ID, NAME)
-                     VALUES (%d, '%s')
-                     """ % (id, name)
-            self.inserts[len(self.inserts)] = sql
-
-        dataTiers = { 1 : "RAW",
-                      2 : "RECO",
-                      3 : "FEVT",
-                      4 : "FEVTHLTALL",
-                      5 : "AOD",
-                      6 : "ALCARECO",
-                      7 : "DQM",
-                      8 : "ALCAPROMPT" }
-        for id, name in dataTiers.items():
-            sql = """INSERT INTO data_tier
                      (ID, NAME)
                      VALUES (%d, '%s')
                      """ % (id, name)

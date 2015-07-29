@@ -52,14 +52,14 @@ class RepackTest(unittest.TestCase):
                                     (id, site_name, state)
                                     VALUES (1, 'SomeSite', 1)
                                     """, transaction = False)
-        myThread.dbi.processData("""INSERT INTO wmbs_location_senames
-                                    (location, se_name)
-                                    VALUES (1, 'SomeSE')
+        myThread.dbi.processData("""INSERT INTO wmbs_location_pnns
+                                    (location, pnn)
+                                    VALUES (1, 'SomePNN')
                                     """, transaction = False)
         
-        myThread.dbi.processData("""INSERT INTO wmbs_location_senames
-                                    (location, se_name)
-                                    VALUES (1, 'SomeSE2')
+        myThread.dbi.processData("""INSERT INTO wmbs_location_pnns
+                                    (location, pnn)
+                                    VALUES (1, 'SomePNN2')
                                     """, transaction = False)
 
         insertRunDAO = daoFactory(classname = "RunConfig.InsertRun")
@@ -69,7 +69,7 @@ class RepackTest(unittest.TestCase):
                              transaction = False)
 
         insertLumiDAO = daoFactory(classname = "RunConfig.InsertLumiSection")
-        for lumi in [1,2,3,4]:
+        for lumi in [1, 2, 3, 4]:
             insertLumiDAO.execute(binds = { 'RUN' : 1,
                                             'LUMI' : lumi },
                                   transaction = False)
@@ -140,12 +140,12 @@ class RepackTest(unittest.TestCase):
         """
         mySplitArgs = self.splitArgs.copy()
 
-        for lumi in [1,2,3,4]:
+        for lumi in [1, 2, 3, 4]:
             filecount = 2
             for i in range(filecount):
                 newFile = File(makeUUID(), size = 1000, events = 100)
                 newFile.addRun(Run(1, *[lumi]))
-                newFile.setLocation("SomeSE", immediateSave = False)
+                newFile.setLocation("SomePNN", immediateSave = False)
                 newFile.create()
                 self.fileset1.addFile(newFile)
 
@@ -209,12 +209,12 @@ class RepackTest(unittest.TestCase):
         mySplitArgs = self.splitArgs.copy()
 
         insertClosedLumiBinds = []
-        for lumi in [1,2,3,4]:
+        for lumi in [1, 2, 3, 4]:
             filecount = 2
             for i in range(filecount):
                 newFile = File(makeUUID(), size = 1000, events = 100)
                 newFile.addRun(Run(1, *[lumi]))
-                newFile.setLocation("SomeSE", immediateSave = False)
+                newFile.setLocation("SomePNN", immediateSave = False)
                 newFile.create()
                 self.fileset1.addFile(newFile)
                 insertClosedLumiBinds.append( { 'RUN' : 1,
@@ -284,7 +284,7 @@ class RepackTest(unittest.TestCase):
             for i in range(filecount):
                 newFile = File(makeUUID(), size = 1000, events = 100)
                 newFile.addRun(Run(1, *[lumi]))
-                newFile.setLocation("SomeSE", immediateSave = False)
+                newFile.setLocation("SomePNN", immediateSave = False)
                 newFile.create()
                 self.fileset1.addFile(newFile)
                 insertClosedLumiBinds.append( { 'RUN' : 1,
@@ -344,7 +344,7 @@ class RepackTest(unittest.TestCase):
             for i in range(filecount):
                 newFile = File(makeUUID(), size = 1000, events = 100)
                 newFile.addRun(Run(1, *[lumi]))
-                newFile.setLocation("SomeSE", immediateSave = False)
+                newFile.setLocation("SomePNN", immediateSave = False)
                 newFile.create()
                 self.fileset1.addFile(newFile)
                 insertClosedLumiBinds.append( { 'RUN' : 1,
@@ -399,12 +399,12 @@ class RepackTest(unittest.TestCase):
         mySplitArgs = self.splitArgs.copy()
 
         insertClosedLumiBinds = []
-        for lumi in [1,2,3,4]:
+        for lumi in [1, 2, 3, 4]:
             filecount = 2
             for i in range(filecount):
                 newFile = File(makeUUID(), size = 1000, events = 100)
                 newFile.addRun(Run(1, *[lumi]))
-                newFile.setLocation("SomeSE", immediateSave = False)
+                newFile.setLocation("SomePNN", immediateSave = False)
                 newFile.create()
                 self.fileset1.addFile(newFile)
                 insertClosedLumiBinds.append( { 'RUN' : 1,
@@ -469,12 +469,12 @@ class RepackTest(unittest.TestCase):
         mySplitArgs = self.splitArgs.copy()
 
         insertClosedLumiBinds = []
-        for lumi in [1,2,4]:
+        for lumi in [1, 2, 4]:
             filecount = 2
             for i in range(filecount):
                 newFile = File(makeUUID(), size = 1000, events = 100)
                 newFile.addRun(Run(1, *[lumi]))
-                newFile.setLocation("SomeSE", immediateSave = False)
+                newFile.setLocation("SomePNN", immediateSave = False)
                 newFile.create()
                 self.fileset1.addFile(newFile)
                 insertClosedLumiBinds.append( { 'RUN' : 1,
@@ -533,7 +533,7 @@ class RepackTest(unittest.TestCase):
         mySplitArgs = self.splitArgs.copy()
 
         insertClosedLumiBinds = []
-        for lumi in [1,2,3]:
+        for lumi in [1, 2, 3]:
             filecount = 2
             for i in range(filecount):
                 if lumi == 3:
@@ -542,7 +542,7 @@ class RepackTest(unittest.TestCase):
                     nevents = 100
                 newFile = File(makeUUID(), size = 1000, events = nevents)
                 newFile.addRun(Run(1, *[lumi]))
-                newFile.setLocation("SomeSE", immediateSave = False)
+                newFile.setLocation("SomePNN", immediateSave = False)
                 newFile.create()
                 self.fileset1.addFile(newFile)
                 insertClosedLumiBinds.append( { 'RUN' : 1,

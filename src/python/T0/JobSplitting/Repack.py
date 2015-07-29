@@ -4,6 +4,7 @@ _Repack_
 Splitting algorithm for repacking.
 """
 
+import time
 import logging
 import threading
 
@@ -29,12 +30,13 @@ class Repack(JobFactory):
         """
         # extract some global scheduling parameters
         self.jobNamePrefix = kwargs.get('jobNamePrefix', "Repack")
-
         self.maxSizeSingleLumi = kwargs['maxSizeSingleLumi']
         self.maxSizeMultiLumi = kwargs['maxSizeMultiLumi']
-
         self.maxInputEvents = kwargs['maxInputEvents']
         self.maxInputFiles = kwargs['maxInputFiles']
+        self.maxLatency = kwargs['maxLatency']
+
+        self.currentTime = time.time()
 
         self.createdGroup = False
 
@@ -46,75 +48,113 @@ class Repack(JobFactory):
                                 logger = logging,
                                 dbinterface = myThread.dbi)
 
-        maxLumiWithJobDAO = daoFactory(classname = "Subscriptions.MaxLumiWithJob")
-        getClosedEmptyLumisDAO = daoFactory(classname = "JobSplitting.GetClosedEmptyLumis")
-
         # keep for later
         self.insertSplitLumisDAO = daoFactory(classname = "JobSplitting.InsertSplitLumis")
 
         # data discovery
-        getFilesDAO = daoFactory(classname = "Subscriptions.GetAvailableRepackFiles")
-        availableFiles = getFilesDAO.execute(self.subscription["id"])
+        getAvailableFilesDAO = daoFactory(classname = "Subscriptions.GetAvailableRepackFiles")
+        availableFiles = getAvailableFilesDAO.execute(self.subscription["id"])
 
         # nothing to do, stop immediately
         if len(availableFiles) == 0:
             return
 
-        # lumis we have data for
-        lumiList = set([])
+        # data discovery for already used lumis
+        getUsedLumisDAO = daoFactory(classname = "Subscriptions.GetUsedLumis")
+        usedLumis = getUsedLumisDAO.execute(self.subscription["id"], False)
+
+        # empty lumis (as declared by StorageManager) are treated the
+        # same way as used lumis, ie. we process around them
+        getEmptyLumisDAO = daoFactory(classname = "Subscriptions.GetLumiHolesForRepack")
+        usedLumis |= getEmptyLumisDAO.execute(self.subscription["id"])
+
+        # sort available files by lumi
+        availableFileLumiDict = {}
         for result in availableFiles:
-            lumiList.add(result['lumi'])
-        lumiList = sorted(list(lumiList))
+            lumi = result['lumi']
+            if not lumi in availableFileLumiDict:
+                availableFileLumiDict[lumi] = []
+            availableFileLumiDict[lumi].append(result)
 
-        # highest lumi with a job
-        maxLumiWithJob = 0
-        if lumiList[0] > 1:
-            maxLumiWithJob = maxLumiWithJobDAO.execute(self.subscription["id"])
+        # loop through lumis in order
+        haveLumiHole = False
+        filesByLumi = {}
+        maxUsedLumi = max(usedLumis) if usedLumis else 0
+        for lumi in range(1, 1+max(maxUsedLumi,max(availableFileLumiDict.keys()))):
 
-        # consistency check
-        if lumiList[0] <= maxLumiWithJob:
-            logging.error("ERROR: finding data that can't be there, bailing out...")
-            return
+            # lumi contains data => remember it for potential processing
+            if lumi in availableFileLumiDict:
 
-        # do we have lumi holes ?
-        detectEmptyLumis = False
-        lumi = maxLumiWithJob + 1
-        while lumi in lumiList:
-            lumi += 1
-        if lumi < lumiList[-1]:
-            detectEmptyLumis = True
+                filesByLumi[lumi] = availableFileLumiDict[lumi]
 
-        # empty and closed lumis
-        emptyLumis = []
-        if detectEmptyLumis:
-            emptyLumis = getClosedEmptyLumisDAO.execute(self.subscription["id"], maxLumiWithJob)
+            # lumi is used and we have data => trigger processing
+            elif lumi in usedLumis:
 
-        # figure out lumi range to create jobs for
-        streamersByLumi = {}
-        firstLumi = maxLumiWithJob + 1
-        lastLumi = lumiList[-1]
-        for lumi in range(firstLumi, lastLumi + 1):
-            if (lumi in lumiList) or (lumi in emptyLumis):
-                streamersByLumi[lumi] = []
+                if len(filesByLumi) > 0:
+
+                    if haveLumiHole:
+                        # if lumi hole check for maxLatency first
+                        if self.getDataAge(filesByLumi) > self.maxLatency:
+                            self.defineJobs(filesByLumi, True, memoryRequirement)
+                            filesByLumi = {}
+                        # if maxLatency not met ignore data for now
+                        else:
+                            filesByLumi = {}
+                    else:
+                        self.defineJobs(filesByLumi, True, memoryRequirement)
+                        filesByLumi = {}
+
+                # if we had a lumi hole it is now not relevant anymore
+                # the next data will have a used lumi in front of it
+                haveLumiHole = False
+
+            # lumi has no data and isn't used, ie. we have a lumi hole
+            # also has an impact on how to handle later data
             else:
-                break
 
-        # figure out what data to create jobs for
-        for fileInfo in availableFiles:
-            lumi = fileInfo['lumi']
-            if streamersByLumi.has_key(lumi):
-                streamersByLumi[lumi].append(fileInfo)
+                if len(filesByLumi) > 0:
 
-        # check if fileset is closed
-        fileset = self.subscription.getFileset()
-        fileset.load()
+                    # forceClose if maxLatency trigger is met
+                    if self.getDataAge(filesByLumi) > self.maxLatency:
+                        self.defineJobs(filesByLumi, True, memoryRequirement)
+                        filesByLumi = {}
+                    # follow the normal thresholds, but only if
+                    # there is no lumi hole in front of the data
+                    elif not haveLumiHole:
+                        self.defineJobs(filesByLumi, False, memoryRequirement)
+                        filesByLumi = {}
+                    # otherwise ignore the data for now
+                    else:
+                        filesByLumi = {}
 
-        self.defineJobs(streamersByLumi, fileset.open, memoryRequirement)
+                haveLumiHole = True
+
+        # now handle whatever data is still left (at the high end of the lumi range)
+        if haveLumiHole:
+            if self.getDataAge(filesByLumi) > self.maxLatency:
+                self.defineJobs(filesByLumi, True, memoryRequirement)
+        else:
+            fileset = self.subscription.getFileset()
+            fileset.load()
+            self.defineJobs(filesByLumi, not fileset.open, memoryRequirement)
 
         return
 
+    def getDataAge(self, filesByLumi):
+        """
+        _getDataAge_
 
-    def defineJobs(self, streamersByLumi, filesetOpen, memoryRequirement):
+        Return age of youngest streamer in filesByLumi
+        """
+        maxInsertTime = 0
+        for filesInfos in filesByLumi.values():
+            for fileInfo in filesInfos:
+                if fileInfo['insert_time'] > maxInsertTime:
+                    maxInsertTime = fileInfo['insert_time']
+
+        return self.currentTime - maxInsertTime
+
+    def defineJobs(self, streamersByLumi, forceClose, memoryRequirement):
         """
         _defineStrictJobs_
 
@@ -177,15 +217,13 @@ class Repack(JobFactory):
                             newSizeTotal = sizeTotal + streamer['filesize']                        
 
                             if newSizeTotal <= self.maxSizeSingleLumi and \
-                                   newEventsTotal <= self.maxInputEvents:
+                                    newEventsTotal <= self.maxInputEvents:
 
                                 eventsTotal = newEventsTotal
                                 sizeTotal = newSizeTotal
                                 streamerList.append(streamer)
 
-                    # allow large single lumi repack to use multiple cores
-                    numberOfCores = 1 + (int)(sizeTotal/(20*1000*1000*1000))
-                    self.createJob(streamerList, eventsTotal, sizeTotal, memoryRequirement, numberOfCores)
+                    self.createJob(streamerList, eventsTotal, sizeTotal, memoryRequirement)
 
                     for streamer in streamerList:
                         lumiStreamerList.remove(streamer)
@@ -218,8 +256,8 @@ class Repack(JobFactory):
 
                 # still safe with new lumi, just add it
                 elif newSizeTotal <= self.maxSizeMultiLumi and \
-                       newEventsTotal <= self.maxInputEvents and \
-                       newInputfiles <= self.maxInputFiles:
+                        newEventsTotal <= self.maxInputEvents and \
+                        newInputfiles <= self.maxInputFiles:
 
                     jobSizeTotal = newSizeTotal
                     jobEventsTotal = newEventsTotal
@@ -235,7 +273,7 @@ class Repack(JobFactory):
                     jobStreamerList = lumiStreamerList
 
         # if we are in closeout issue repack job for leftovers
-        if len(jobStreamerList) > 0 and not filesetOpen:
+        if len(jobStreamerList) > 0 and forceClose:
             self.createJob(jobStreamerList, jobEventsTotal, jobSizeTotal, memoryRequirement)
 
         if len(splitLumis) > 0:
@@ -244,7 +282,7 @@ class Repack(JobFactory):
         return
 
 
-    def createJob(self, streamerList, jobEvents, jobSize, memoryRequirement, numberOfCores = 1):
+    def createJob(self, streamerList, jobEvents, jobSize, memoryRequirement):
         """
         _createJob_
 
@@ -255,14 +293,16 @@ class Repack(JobFactory):
 
         self.newJob(name = "%s-%s" % (self.jobNamePrefix, makeUUID()))
 
-        if numberOfCores > 1:
-            self.currentJob.addBaggageParameter("numberOfCores", numberOfCores)
-
         for streamer in streamerList:
             f = File(id = streamer['id'],
                      lfn = streamer['lfn'])
             f.setLocation(streamer['location'], immediateSave = False)
             self.currentJob.addFile(f)
+
+        # allow large (single lumi) repack to use multiple cores
+        numberOfCores = 1 + (int)(jobSize/(20*1000*1000*1000))
+        if numberOfCores > 1:
+            self.currentJob.addBaggageParameter("numberOfCores", numberOfCores)
 
         # job time based on
         #   - 5 min initialization
@@ -272,6 +312,8 @@ class Repack(JobFactory):
         # job disk based on
         #   - RAW on local disk (factor 1)
         jobTime = 300 + jobSize/500000 + (jobSize*2)/5000000
-        self.currentJob.addResourceEstimates(jobTime = jobTime, disk = jobSize/1024, memory = memoryRequirement)
+        self.currentJob.addResourceEstimates(jobTime = jobTime,
+                                             disk = jobSize/1024,
+                                             memory = memoryRequirement)
 
         return

@@ -150,10 +150,10 @@ def uploadConditions(username, password, serviceProxy):
         # check for timeout, but only if there is a next run
         if not advanceToNextRun and index < len(conditions.keys()):
 
-            getRunEndTimeDAO = daoFactory(classname = "ConditionUpload.GetRunEndTime")
-            endTime = getRunEndTimeDAO.execute(run, transaction = False)
+            getRunStopTimeDAO = daoFactory(classname = "ConditionUpload.GetRunStopTime")
+            stopTime = getRunStopTimeDAO.execute(run, transaction = False)
 
-            if time.time() < endTime + timeout:
+            if time.time() < stopTime + timeout:
                 break
 
     return
@@ -180,7 +180,7 @@ def uploadToDropbox(condFiles, dropboxHost, validationMode,
             completeFiles.append(condFile)
         else:
             (filenamePrefix, filenameExt) = os.path.basename(condFile['lfn']).split('.')
-            if not filesDict.has_key(filenamePrefix):
+            if filenamePrefix not in filesDict:
                 filesDict[filenamePrefix] = {}
             filesDict[filenamePrefix][filenameExt] = condFile
 
@@ -283,13 +283,11 @@ def uploadPayload(filenamePrefix, sqliteFile, metaFile, dropboxHost, validationM
             else:
                 uploadStatus = True
                 try:
-                    # normally I would want to evanluate the return code here,
-                    # but as long as the dropbox resturns errors for non-fixable
-                    # problems, I cannot do that (would retry forever)
                     upload.uploadTier0Files([filenameDB], username, password)
                 except:
                     logging.exception("Something went wrong with the Dropbox upload...")
-                
+                    uploadStatus = False
+
                 if uploadStatus:
                     completeFiles.append(sqliteFile)
                     completeFiles.append(metaFile)

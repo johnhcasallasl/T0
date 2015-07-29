@@ -4,6 +4,7 @@ _ExampleConfig_
 Example configuration for RunConfig unittest
 
 """
+from __future__ import print_function
 from T0.RunConfig.Tier0Config import addDataset
 from T0.RunConfig.Tier0Config import createTier0Config
 from T0.RunConfig.Tier0Config import setAcquisitionEra
@@ -12,8 +13,6 @@ from T0.RunConfig.Tier0Config import setDefaultScramArch
 from T0.RunConfig.Tier0Config import setBackfill
 from T0.RunConfig.Tier0Config import setBulkDataType
 from T0.RunConfig.Tier0Config import setProcessingSite
-from T0.RunConfig.Tier0Config import setBulkInjectNode
-from T0.RunConfig.Tier0Config import setExpressInjectNode
 from T0.RunConfig.Tier0Config import setExpressSubscribeNode
 from T0.RunConfig.Tier0Config import setDQMDataTier
 from T0.RunConfig.Tier0Config import setDQMUploadUrl
@@ -33,7 +32,6 @@ setConfigVersion(tier0Config, "replace with real version")
 
 # Settings up sites
 processingSite = "T2_CH_CERN_T0"
-cernPhedexNode = "T2_CH_CERN"
 
 # Set global parameters:
 #  acquisition era
@@ -43,8 +41,6 @@ setAcquisitionEra(tier0Config, "ExampleConfig_UnitTest")
 setBackfill(tier0Config, None)
 setBulkDataType(tier0Config, "data")
 setProcessingSite(tier0Config, processingSite)
-setBulkInjectNode(tier0Config, cernPhedexNode)
-setExpressInjectNode(tier0Config, cernPhedexNode)
 setExpressSubscribeNode(tier0Config, "T2_CH_CERN")
 
 # Override for DQM data tier
@@ -69,10 +65,10 @@ setScramArch(tier0Config, "CMSSW_6_2_4", "slc5_amd64_gcc472")
 repackVersionOverride = {
     }
 expressVersionOverride = {
-    "CMSSW_5_2_7" : "CMSSW_5_3_14",
+    "CMSSW_5_2_7": "CMSSW_5_3_14",
     }
 hltmonVersionOverride = {
-    "CMSSW_5_2_7" : "CMSSW_5_3_8",
+    "CMSSW_5_2_7": "CMSSW_5_3_8",
     }
 
 addRepackConfig(tier0Config, "Default",
@@ -154,4 +150,4 @@ addDataset(tier0Config, "MinimumBias",
            scenario = "pp")
 
 if __name__ == '__main__':
-    print tier0Config
+    print(tier0Config)

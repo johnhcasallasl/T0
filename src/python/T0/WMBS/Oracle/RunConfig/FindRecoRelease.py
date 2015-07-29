@@ -27,7 +27,7 @@ class FindRecoRelease(DBFormatter):
         now = int(time.time())
 
         binds = []
-        for dataset,delays in datasetDelays.items():
+        for dataset, delays in datasetDelays.items():
             binds.append( { 'NOW' : now,
                             'DATASET' : dataset,
                             'DELAY' : delays[0],
@@ -43,8 +43,8 @@ class FindRecoRelease(DBFormatter):
                             primary_dataset.id = reco_release_config.primds_id AND
                             primary_dataset.name = :DATASET
                           WHERE checkForZeroOneState(reco_release_config.released) = 0
-                          AND run.end_time + :DELAY - :DELAY_OFFSET < :NOW
-                          AND run.end_time > 0 ) t
+                          AND run.stop_time + :DELAY - :DELAY_OFFSET < :NOW
+                          AND run.stop_time > 0 ) t
                  SET t.released = 1,
                      t.delay = :DELAY,
                      t.delay_offset = :DELAY_OFFSET
@@ -72,7 +72,7 @@ class FindRecoRelease(DBFormatter):
                    repack_config.run_id = reco_release_config.run_id AND
                    repack_config.stream_id = run_primds_stream_assoc.stream_id
                  WHERE checkForZeroOneState(reco_release_config.released) = 1
-                 AND run.end_time + reco_release_config.delay < :NOW
+                 AND run.stop_time + reco_release_config.delay < :NOW
                  """
 
         results = self.dbi.processData(sql, binds, conn = conn,
@@ -83,7 +83,7 @@ class FindRecoRelease(DBFormatter):
 
             run = result[0]
 
-            if not recoRelease.has_key(run):
+            if run not in recoRelease:
                 recoRelease[run] = []
 
             recoRelease[run].append((result[1],

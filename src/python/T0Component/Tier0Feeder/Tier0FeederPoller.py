@@ -135,7 +135,7 @@ class Tier0FeederPoller(BaseWorkerThread):
                     try:
                         hltConfig = self.getHLTConfigDAO.execute(hltkey, transaction = False)
                         if hltConfig['process'] == None or len(hltConfig['mapping']) == 0:
-                            raise RuntimeError, "HLTConfDB query returned no process or mapping"
+                            raise RuntimeError("HLTConfDB query returned no process or mapping")
                     except:
                         logging.exception("Can't retrieve hltkey %s for run %d" % (hltkey, run))
                         continue
@@ -161,9 +161,10 @@ class Tier0FeederPoller(BaseWorkerThread):
                         logging.exception("Can't configure for run %d and stream %s" % (run, stream))
 
         #
-        # end runs which are active and have ended according to the EoR StorageManager records
+        # stop and close runs based on RunSummary and StorageManager records
         #
-        RunLumiCloseoutAPI.endRuns(self.dbInterfaceStorageManager)
+        RunLumiCloseoutAPI.stopRuns(self.dbInterfaceStorageManager)
+        RunLumiCloseoutAPI.closeRuns(self.dbInterfaceStorageManager)
 
         #
         # release runs for Express
@@ -198,9 +199,11 @@ class Tier0FeederPoller(BaseWorkerThread):
         # insert express and reco configs into Tier0 Data Service
         #
         if self.haveT0DataSvc:
+            self.updateRunStreamDoneT0DataSvc()
             self.updateExpressConfigsT0DataSvc()
             self.updateRecoConfigsT0DataSvc()
             self.updateRecoReleaseConfigsT0DataSvc()
+            self.lockDatasetsT0DataSvc()
 
         #
         # mark express and repack workflows as injected if certain conditions are met
@@ -355,8 +358,8 @@ class Tier0FeederPoller(BaseWorkerThread):
 
         allFinishedStreamers = getFinishedStreamersDAO.execute(transaction = False)
 
-        num = len(allFinishedStreamers)/50
-        for finishedStreamers in [allFinishedStreamers[i::num] for i in range(num)]:
+        chunkSize = 50
+        for finishedStreamers in [ allFinishedStreamers[i:i+chunkSize] for i in range(0, len(allFinishedStreamers), chunkSize) ]:
 
             streamers = []
             filenameParams = ""
@@ -366,22 +369,53 @@ class Tier0FeederPoller(BaseWorkerThread):
                 filenameParams += "-FILENAME %s " % os.path.basename(lfn)
 
             logging.debug("Notifying transfer system about processed streamers")
-            p = subprocess.Popen("/bin/bash",stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            p = subprocess.Popen("/bin/bash", stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             output, error = p.communicate("""
             export T0_BASE_DIR=%s
             export T0ROOT=${T0_BASE_DIR}/T0
             export CONFIG=${T0_BASE_DIR}/Config/TransferSystem_CERN.cfg
  
             export PERL5LIB=${T0ROOT}/perl_lib
- 
+
+            unset LANGUAGE
+            unset LC_ALL
+            unset LC_CTYPE
+            export LANG=C
+
             ${T0ROOT}/operations/sendRepackedStatus.pl --config $CONFIG %s
             """ % (self.transferSystemBaseDir, filenameParams))
 
             if len(error) > 0:
                 logging.error("ERROR: Could not notify transfer system about processed streamers")
                 logging.error("ERROR: %s" % error)
+            else:
+                markStreamersFinishedDAO.execute(streamers, transaction = False)
 
-            markStreamersFinishedDAO.execute(streamers, transaction = False)
+        return
+
+    def updateRunStreamDoneT0DataSvc(self):
+        """
+        _updateRunStreamDoneT0DataSvc_
+
+        Check if a run/stream workflow (express or repack) is finished and
+        cleaned up and push a completion record into the Tier0 Data Service.
+
+        """
+        getRunStreamDoneDAO = self.daoFactory(classname = "T0DataSvc.GetRunStreamDone")
+        runStreamDone = getRunStreamDoneDAO.execute(transaction = False)
+
+        if len(runStreamDone) > 0:
+
+            binds = []
+            for runStream in runStreamDone:
+                binds.append( { 'RUN' : runStream['run'],
+                                'STREAM' : runStream['stream'] } )
+
+            insertRunStreamDoneDAO = self.daoFactoryT0DataSvc(classname = "T0DataSvc.InsertRunStreamDone")
+            insertRunStreamDoneDAO.execute(binds = binds, transaction = False)
+
+            updateRunStreamDoneDAO = self.daoFactory(classname = "T0DataSvc.UpdateRunStreamDone")
+            updateRunStreamDoneDAO.execute(binds = binds, transaction = False)
 
         return
 
@@ -408,6 +442,8 @@ class Tier0FeederPoller(BaseWorkerThread):
                                       'SCRAM_ARCH' : config['scram_arch'],
                                       'RECO_CMSSW' : config['reco_cmssw'],
                                       'RECO_SCRAM_ARCH' : config['reco_scram_arch'],
+                                      'ALCA_SKIM' : config['alca_skim'],
+                                      'DQM_SEQ' : config['dqm_seq'],
                                       'GLOBAL_TAG' : config['global_tag'][:50],
                                       'SCENARIO' : config['scenario'] } )
                 bindsUpdate.append( { 'RUN' : config['run'],
@@ -442,6 +478,9 @@ class Tier0FeederPoller(BaseWorkerThread):
                                       'PRIMDS' : config['primds'],
                                       'CMSSW' : config['cmssw'],
                                       'SCRAM_ARCH' : config['scram_arch'],
+                                      'ALCA_SKIM' : config['alca_skim'],
+                                      'PHYSICS_SKIM' : config['physics_skim'],
+                                      'DQM_SEQ' : config['dqm_seq'],
                                       'GLOBAL_TAG' : config['global_tag'][:50],
                                       'SCENARIO' : config['scenario'] } )
                 bindsUpdate.append( { 'RUN' : config['run'],
@@ -485,6 +524,32 @@ class Tier0FeederPoller(BaseWorkerThread):
 
             updateRecoReleaseConfigsDAO = self.daoFactory(classname = "T0DataSvc.UpdateRecoReleaseConfigs")
             updateRecoReleaseConfigsDAO.execute(binds = bindsUpdate, transaction = False)
+
+        return
+
+    def lockDatasetsT0DataSvc(self):
+        """
+        _lockDatasetsT0DataSvc_
+
+        Publish dataset information into the Tier0 Data Service.
+
+        """
+        getDatasetLockedDAO = self.daoFactory(classname = "T0DataSvc.GetDatasetLocked")
+        datasetConfigs = getDatasetLockedDAO.execute(transaction = False)
+
+        if len(datasetConfigs) > 0:
+
+            bindsInsert = []
+            bindsUpdate = []
+            for config in datasetConfigs:
+                bindsInsert.append( { 'PATH' : config['path'] } )
+                bindsUpdate.append( { 'ID' : config['id'] } )
+
+            insertDatasetLockedDAO = self.daoFactoryT0DataSvc(classname = "T0DataSvc.InsertDatasetLocked")
+            insertDatasetLockedDAO.execute(binds = bindsInsert, transaction = False)
+
+            updateDatasetLockedDAO = self.daoFactory(classname = "T0DataSvc.UpdateDatasetLocked")
+            updateDatasetLockedDAO.execute(binds = bindsUpdate, transaction = False)
 
         return
 
