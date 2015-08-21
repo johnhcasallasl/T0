@@ -71,10 +71,16 @@ def modifyConfiguration(config, **args):
 ##                 section = getattr(config, p[0])
 ##                 setattr(section, p[1], v)
 
-    config.BossAir.pluginNames = ["LsfPlugin"]
+    config.BossAir.pluginNames = ["PyCondorPlugin"]
 
     if hasattr(config, "JobUpdater"):
         delattr(config, "JobUpdater")
+    
+    # don't use workqueue
+    if hasattr(config, "WorkQueueManager"):
+        delattr(config, "WorkQueueManager")
+    
+    config.TaskArchiver.useWorkQueue = False
     
     # t0 wmstats specific configuration
     config.AnalyticsDataCollector.localT0RequestDBURL = "%s/%s" % (config.JobStateMachine.couchurl, 
