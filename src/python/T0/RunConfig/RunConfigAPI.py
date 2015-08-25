@@ -294,7 +294,8 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                     'nonCustodialSites' : [ runInfo['express_subscribe'] ],
                                     'autoApproveSites' : [ runInfo['express_subscribe'] ],
                                     'priority' : "high",
-                                    'primaryDataset' : specialDataset } )
+                                    'primaryDataset' : specialDataset,
+                                    'deleteFromSource' : True } )
 
             alcaSkim = None
             if len(streamConfig.Express.AlcaSkims) > 0:
@@ -402,6 +403,7 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                             'autoApproveSites' : autoApproveSites,
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : "RAW" } )
 
                 #
@@ -421,6 +423,7 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                             'autoApproveSites' : autoApproveSites,
                                             'priority' : "high",
                                             'primaryDataset' : "%s-Error" % dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : "RAW" } )
 
 
@@ -444,7 +447,8 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                         'nonCustodialSites' : [ runInfo['express_subscribe'] ],
                                         'autoApproveSites' : [ runInfo['express_subscribe'] ],
                                         'priority' : "high",
-                                        'primaryDataset' : dataset } )
+                                        'primaryDataset' : dataset,
+                                        'deleteFromSource' : True } )
 
         #
         # finally create WMSpec
@@ -457,8 +461,6 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
 
             specArguments = {}
 
-            specArguments['TimePerEvent'] = 1
-            specArguments['SizePerEvent'] = 200
             specArguments['Memory'] = 1000
 
             specArguments['RequestPriority'] = tier0Config.Global.BaseRequestPriority + 5000
@@ -492,8 +494,8 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
 
             specArguments = {}
 
-            specArguments['TimePerEvent'] = 12
-            specArguments['SizePerEvent'] = 512
+            specArguments['TimePerEvent'] = streamConfig.Express.TimePerEvent
+            specArguments['SizePerEvent'] = streamConfig.Express.SizePerEvent
             specArguments['Memory'] = 2500
 
             if streamConfig.Express.Multicore:
@@ -521,7 +523,7 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             specArguments['MaxInputFiles'] = streamConfig.Express.MaxInputFiles
             specArguments['MaxLatency'] = streamConfig.Express.MaxLatency
             specArguments['AlcaSkims'] = streamConfig.Express.AlcaSkims
-            specArguments['DqmSequences'] = streamConfig.Express.DqmSequences
+            specArguments['DQMSequences'] = streamConfig.Express.DqmSequences
             specArguments['AlcaHarvestTimeout'] = runInfo['ah_timeout']
             specArguments['AlcaHarvestDir'] = runInfo['ah_dir']
             specArguments['DQMUploadProxy'] = dqmUploadProxy
@@ -545,7 +547,6 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             specArguments['RunNumber'] = run
             specArguments['AcquisitionEra'] = runInfo['acq_era']
             specArguments['Outputs'] = outputModuleDetails
-            specArguments['OverrideCatalog'] = "trivialcatalog_file:/cvmfs/cms.cern.ch/SITECONF/T2_CH_CERN/Tier0/override_catalog.xml?protocol=override"
             specArguments['ValidStatus'] = "VALID"
 
             specArguments['SiteWhitelist'] = [ tier0Config.Global.ProcessingSite ]
@@ -659,27 +660,11 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
     releasePromptRecoDAO = daoFactory(classname = "RunConfig.ReleasePromptReco")
     insertWorkflowMonitoringDAO = daoFactory(classname = "RunConfig.InsertWorkflowMonitoring")
 
-    bindsDatasetScenario = []
-    bindsCMSSWVersion = []
-    bindsRecoConfig = []
-    bindsStorageNode = []
-    bindsReleasePromptReco = []
-
     # mark workflows as injected
     wmbsDaoFactory = DAOFactory(package = "WMCore.WMBS",
                                 logger = logging,
                                 dbinterface = myThread.dbi)
     markWorkflowsInjectedDAO   = wmbsDaoFactory(classname = "Workflow.MarkInjectedWorkflows")
-
-    #
-    # for creating PromptReco specs
-    #
-    recoSpecs = {}
-
-    #
-    # for PhEDEx subscription settings
-    #
-    subscriptions = []
 
     #
     # handle PromptReco release for datasets
@@ -693,6 +678,18 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
     recoRelease = findRecoReleaseDAO.execute(datasetDelays, transaction = False)
     for run in sorted(recoRelease.keys()):
+
+        # for creating PromptReco specs
+        recoSpecs = {}
+
+        # for PhEDEx subscription settings
+        subscriptions = []
+
+        bindsDatasetScenario = []
+        bindsCMSSWVersion = []
+        bindsRecoConfig = []
+        bindsStorageNode = []
+        bindsReleasePromptReco = []
 
         # retrieve some basic run information
         getRunInfoDAO = daoFactory(classname = "RunConfig.GetRunInfo")
@@ -757,6 +754,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                             'autoApproveSites' : [phedexConfig['disk_node']],
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : "AOD" } )
 
                 if datasetConfig.WriteMINIAOD:
@@ -766,6 +764,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                             'autoApproveSites' : [phedexConfig['disk_node']],
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : "MINIAOD" } )
 
                 if len(datasetConfig.AlcaSkims) > 0:
@@ -775,6 +774,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                             'autoApproveSites' : [],
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : "ALCARECO" } )
 
                 if datasetConfig.WriteDQM:
@@ -784,6 +784,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                             'autoApproveSites' : [],
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : tier0Config.Global.DQMDataTier } )
 
                 if datasetConfig.WriteRECO:
@@ -792,6 +793,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                             'autoApproveSites' : [phedexConfig['disk_node']],
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
                                             'dataTier' : "RECO" } )
 
             elif phedexConfig['archival_node'] != None:
@@ -803,6 +805,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                                 'autoApproveSites' : [phedexConfig['archival_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
+                                                'deleteFromSource' : True,
                                                 'dataTier' : "AOD" } )
 
                     if datasetConfig.WriteMINIAOD:
@@ -812,6 +815,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                                 'autoApproveSites' : [phedexConfig['archival_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
+                                                'deleteFromSource' : True,
                                                 'dataTier' : "MINIAOD" } )
 
                     if len(datasetConfig.AlcaSkims) > 0:
@@ -821,6 +825,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                                 'autoApproveSites' : [phedexConfig['archival_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
+                                                'deleteFromSource' : True,
                                                 'dataTier' : "ALCARECO" } )
 
                     if datasetConfig.WriteDQM:
@@ -830,6 +835,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                                 'autoApproveSites' : [phedexConfig['archival_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
+                                                'deleteFromSource' : True,
                                                 'dataTier' : tier0Config.Global.DQMDataTier } )
 
                     if datasetConfig.WriteRECO:
@@ -839,6 +845,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                                 'autoApproveSites' : [phedexConfig['archival_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
+                                                'deleteFromSource' : True,
                                                 'dataTier' : "RECO" } )
 
             writeTiers = []
@@ -863,13 +870,15 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 specArguments = {}
 
-                specArguments['TimePerEvent'] = 12
-                specArguments['SizePerEvent'] = 512
+                specArguments['TimePerEvent'] = datasetConfig.TimePerEvent
+                specArguments['SizePerEvent'] = datasetConfig.SizePerEvent
                 specArguments['Memory'] = 2500
 
                 if datasetConfig.Multicore:
                     specArguments['Multicore'] = datasetConfig.Multicore
                     specArguments['Memory'] = 2500 + (datasetConfig.Multicore - 1) * 500
+
+                specArguments['Memory'] += len(datasetConfig.PhysicsSkims) * 100
 
                 specArguments['RequestPriority'] = tier0Config.Global.BaseRequestPriority
 
@@ -893,7 +902,8 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 specArguments['WriteTiers'] = writeTiers
                 specArguments['AlcaSkims'] = datasetConfig.AlcaSkims
-                specArguments['DqmSequences'] = datasetConfig.DqmSequences
+                specArguments['PhysicsSkims'] = datasetConfig.PhysicsSkims
+                specArguments['DQMSequences'] = datasetConfig.DqmSequences
 
                 specArguments['UnmergedLFNBase'] = "/store/unmerged/%s" % runInfo['bulk_data_type']
                 if runInfo['backfill']:
@@ -932,28 +942,28 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 recoSpecs[workflowName] = (wmbsHelper, wmSpec, fileset)
 
-    try:
-        myThread.transaction.begin()
-        if len(bindsDatasetScenario) > 0:
-            insertDatasetScenarioDAO.execute(bindsDatasetScenario, conn = myThread.transaction.conn, transaction = True)
-        if len(bindsCMSSWVersion) > 0:
-            insertCMSSWVersionDAO.execute(bindsCMSSWVersion, conn = myThread.transaction.conn, transaction = True)
-        if len(bindsRecoConfig) > 0:
-            insertRecoConfigDAO.execute(bindsRecoConfig, conn = myThread.transaction.conn, transaction = True)
-        if len(bindsStorageNode) > 0:
-            insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
-        if len(bindsReleasePromptReco) > 0:
-            releasePromptRecoDAO.execute(bindsReleasePromptReco, conn = myThread.transaction.conn, transaction = True)
-        for (wmbsHelper, wmSpec, fileset) in recoSpecs.values():
-            wmbsHelper.createSubscription(wmSpec.getTask(taskName), Fileset(id = fileset), alternativeFilesetClose = True)
-            insertWorkflowMonitoringDAO.execute([fileset],  conn = myThread.transaction.conn, transaction = True)
-        if len(recoSpecs) > 0:
-            markWorkflowsInjectedDAO.execute(recoSpecs.keys(), injected = True, conn = myThread.transaction.conn, transaction = True)
-    except Exception as ex:
-        logging.exception(ex)
-        myThread.transaction.rollback()
-        raise RuntimeError("Problem in releasePromptReco() database transaction !")
-    else:
-        myThread.transaction.commit()
+        try:
+            myThread.transaction.begin()
+            if len(bindsDatasetScenario) > 0:
+                insertDatasetScenarioDAO.execute(bindsDatasetScenario, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsCMSSWVersion) > 0:
+                insertCMSSWVersionDAO.execute(bindsCMSSWVersion, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsRecoConfig) > 0:
+                insertRecoConfigDAO.execute(bindsRecoConfig, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsStorageNode) > 0:
+                insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsReleasePromptReco) > 0:
+                releasePromptRecoDAO.execute(bindsReleasePromptReco, conn = myThread.transaction.conn, transaction = True)
+            for (wmbsHelper, wmSpec, fileset) in recoSpecs.values():
+                wmbsHelper.createSubscription(wmSpec.getTask(taskName), Fileset(id = fileset), alternativeFilesetClose = True)
+                insertWorkflowMonitoringDAO.execute([fileset],  conn = myThread.transaction.conn, transaction = True)
+            if len(recoSpecs) > 0:
+                markWorkflowsInjectedDAO.execute(recoSpecs.keys(), injected = True, conn = myThread.transaction.conn, transaction = True)
+        except Exception as ex:
+            logging.exception(ex)
+            myThread.transaction.rollback()
+            raise RuntimeError("Problem in releasePromptReco() database transaction !")
+        else:
+            myThread.transaction.commit()
 
     return
