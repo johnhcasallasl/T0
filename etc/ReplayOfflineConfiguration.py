@@ -320,7 +320,7 @@ for dataset in datasets:
 ################################
 
 datasets = [ "TOTEM_minBias", "TOTEM_romanPots", "ToTOTEM", "ZeroBiasTotem", "MinimumBiasTotem",
-             "TOTEM_minBias1", "TOTEM_minBias2", "TOTEM_romanPots1", "TOTEM_romanPots2" ]
+             "TOTEM_minBias1", "TOTEM_minBias2", "TOTEM_romanPots1", "TOTEM_romanPots2", "TOTEM_romanPots3" ]
 
 for dataset in datasets:
     addDataset(tier0Config, dataset,
@@ -598,25 +598,6 @@ addExpressConfig(tier0Config, "HLTMonitor",
                  blockCloseDelay = 1200,
                  timePerEvent = 4, #I have to get some stats to set this properly
                  sizePerEvent = 1700, #I have to get some stats to set this properly
-                 versionOverride = expressVersionOverride)
-
-addExpressConfig(tier0Config, "DQMOffline",
-                 scenario = "ppRun2B0T",
-                 data_tiers = [ "FEVTHLTALL" ],
-                 write_dqm = True,
-                 alca_producers = [],
-                 dqm_sequences = [],
-                 reco_version = defaultCMSSWVersion,
-                 global_tag_connect = globalTagConnect,
-                 global_tag = expressGlobalTag,
-                 proc_ver = expressProcVersion,
-                 maxInputRate = 23 * 1000,
-                 maxInputEvents = 400,
-                 maxInputSize = 2 * 1024 * 1024 * 1024,
-                 maxInputFiles = 15,
-                 maxLatency = 15 * 23,
-                 periodicHarvestInterval = 20 * 60,
-                 blockCloseDelay = 1200,
                  versionOverride = expressVersionOverride)
 
 #######################
