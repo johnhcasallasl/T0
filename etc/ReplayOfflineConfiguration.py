@@ -33,10 +33,10 @@ tier0Config = createTier0Config()
 setConfigVersion(tier0Config, "replace with real version")
 
 # Settings up sites
-processingSite = "T2_CH_CERN_T0"
-cernPhedexNode = "T2_CH_CERN"
-#processingSite = "T2_CH_CERN_AI"
-#cernPhedexNode = "T0_CH_CERN_Disk"
+#processingSite = "T2_CH_CERN_T0"
+#cernPhedexNode = "T2_CH_CERN"
+processingSite = "T2_CH_CERN_AI"
+cernPhedexNode = "T0_CH_CERN_Disk"
 
 
 # Set global parameters:
@@ -53,7 +53,7 @@ setBulkDataType(tier0Config, "data")
 setProcessingSite(tier0Config, processingSite)
 setBulkInjectNode(tier0Config, cernPhedexNode)
 setExpressInjectNode(tier0Config, cernPhedexNode)
-setExpressSubscribeNode(tier0Config, "T2_CH_CERN")
+setExpressSubscribeNode(tier0Config, None)
 
 # Override for DQM data tier
 setDQMDataTier(tier0Config, "DQMIO")
@@ -85,7 +85,8 @@ setScramArch(tier0Config, "CMSSW_5_3_20", "slc6_amd64_gcc472")
 
 # Configure scenarios
 #ppScenario = "ppRun2"
-ppScenario = "ppRun2"
+ppScenarioExpress = "ppRun2"
+ppScenario = "ppRun2at50ns"
 cosmicsScenario = "cosmicsRun2"
 hcalnzsScenario = "hcalnzsRun2"
 
@@ -534,7 +535,7 @@ for dataset in datasets:
 #############################
 
 addExpressConfig(tier0Config, "Express",
-                 scenario = ppScenario,
+                 scenario = ppScenarioExpress,
                  data_tiers = [ "FEVT" ],
                  write_dqm = True,
                  alca_producers = [ "SiStripPCLHistos", "SiStripCalZeroBias", "SiStripCalMinBias",
@@ -579,7 +580,7 @@ addExpressConfig(tier0Config, "ExpressCosmics",
                  versionOverride = expressVersionOverride)
 
 addExpressConfig(tier0Config, "HLTMonitor",
-                 scenario = ppScenario,
+                 scenario = ppScenarioExpress,
                  data_tiers = [ "FEVTHLTALL" ],
                  write_dqm = True,
                  alca_producers = [],
