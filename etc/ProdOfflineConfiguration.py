@@ -66,7 +66,7 @@ defaultRecoTimeout =  48 * 3600
 defaultRecoLockTimeout = 1800
 
 # DQM Server
-setDQMUploadUrl(tier0Config, "https://cmsweb.cern.ch/dqm/offline;https://cmsweb-testbed.cern.ch/dqm/offline")
+setDQMUploadUrl(tier0Config, "https://cmsweb.cern.ch/dqm/offline")
 
 # PCL parameters
 setPromptCalibrationConfig(tier0Config,
@@ -97,7 +97,7 @@ alcarawProcVersion = 2
 
 # Defaults for GlobalTag
 expressGlobalTag = "74X_dataRun2_Express_v2"
-promptrecoGlobalTag = "74X_dataRun2_Prompt_v3"
+promptrecoGlobalTag = "74X_dataRun2_Prompt_v2"
 alcap0GlobalTag = "74X_dataRun2_Prompt_v2"
 
 globalTagConnect = "frontier://PromptProd/CMS_CONDITIONS"
