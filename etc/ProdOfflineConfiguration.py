@@ -46,7 +46,7 @@ cernPhedexNode = "T0_CH_CERN_Disk"
 #  Data type
 #  Processing site (where jobs run)
 #  PhEDEx locations
-setAcquisitionEra(tier0Config, "Run2015C")
+setAcquisitionEra(tier0Config, "Run2015D")
 setBaseRequestPriority(tier0Config, 250000)
 setBackfill(tier0Config, None)
 setBulkDataType(tier0Config, "data")
@@ -78,7 +78,7 @@ setPromptCalibrationConfig(tier0Config,
 
 
 # Defaults for CMSSW version
-defaultCMSSWVersion = "CMSSW_7_4_11_patch1"
+defaultCMSSWVersion = "CMSSW_7_4_12_patch4"
 
 # Configure ScramArch
 setDefaultScramArch(tier0Config, "slc6_amd64_gcc491")
@@ -91,9 +91,9 @@ hcalnzsScenario = "hcalnzsRun2"
 
 # Defaults for processing version
 defaultProcVersionRAW = 1
-defaultProcVersionReco = 2
-expressProcVersion = 2
-alcarawProcVersion = 2
+defaultProcVersionReco = 3
+expressProcVersion = 3
+alcarawProcVersion = 3
 
 # Defaults for GlobalTag
 expressGlobalTag = "74X_dataRun2_Express_v2"
@@ -114,28 +114,30 @@ alcarawSplitting = 20000 * numberOfCores
 # Setup repack and express mappings
 #
 repackVersionOverride = {
-    "CMSSW_7_4_2" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_3" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_4" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_5" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_6" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_7" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_8" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_9" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_10" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_11" : "CMSSW_7_4_11_patch1",
+    "CMSSW_7_4_2" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_3" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_4" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_5" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_6" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_7" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_8" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_9" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_10" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_11" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_12" : "CMSSW_7_4_12_patch4",
     }
 expressVersionOverride = {
-    "CMSSW_7_4_2" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_3" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_4" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_5" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_6" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_7" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_8" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_9" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_10" : "CMSSW_7_4_11_patch1",
-    "CMSSW_7_4_11" : "CMSSW_7_4_11_patch1",
+    "CMSSW_7_4_2" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_3" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_4" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_5" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_6" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_7" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_8" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_9" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_10" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_11" : "CMSSW_7_4_12_patch4",
+    "CMSSW_7_4_12" : "CMSSW_7_4_12_patch4",
     }
 
 #set default repack settings for bulk streams
@@ -379,8 +381,8 @@ for dataset in datasets:
 ################################
 
 datasets = [ "CastorJets", "EGMLowPU", "EmptyBX", "FSQJets1", "FSQJets2", "FSQJets3", 
-             "FullTrack", "HINCaloJet40", "HINCaloJetsOther", "HINMuon", "HINPFJetsOther", 
-             "HINPhoton", "HighMultiplicity85", "L1MinimumBias",
+             "FullTrack", "HINCaloJet40", "HINCaloJets", "HINCaloJetsOther", "HINMuon", 
+             "HINPFJets", "HINPFJetsOther", "HINPhoton", "HighMultiplicity85", "L1MinimumBias",
              "L1MinimumBiasHF1", "L1MinimumBiasHF2", "L1MinimumBiasHF3", "L1MinimumBiasHF4",
              "L1MinimumBiasHF5", "L1MinimumBiasHF6", "L1MinimumBiasHF7", "L1MinimumBiasHF8" ]
 
@@ -390,8 +392,8 @@ for dataset in datasets:
                scenario = ppScenario)
 
 datasets = [ "CastorJets_0T", "EGMLowPU_0T", "EmptyBX_0T", "FSQJets1_0T", "FSQJets2_0T", "FSQJets3_0T",
-             "FullTrack_0T", "HINCaloJet40_0T", "HINCaloJetsOther_0T", "HINMuon_0T", "HINPFJetsOther_0T",
-             "HINPhoton_0T", "HighMultiplicity85_0T", "L1MinimumBias_0T",
+             "FullTrack_0T", "HINCaloJet40_0T", "HINCaloJets_0T", "HINCaloJetsOther_0T", "HINMuon_0T", 
+             "HINPFJets_0T", "HINPFJetsOther_0T", "HINPhoton_0T", "HighMultiplicity85_0T", "L1MinimumBias_0T",
              "L1MinimumBiasHF1_0T", "L1MinimumBiasHF2_0T", "L1MinimumBiasHF3_0T", "L1MinimumBiasHF4_0T",
              "L1MinimumBiasHF5_0T", "L1MinimumBiasHF6_0T", "L1MinimumBiasHF7_0T", "L1MinimumBiasHF8_0T" ]
 
@@ -888,6 +890,26 @@ for dataset in datasets:
                write_miniaod = False,
                scenario = cosmicsScenario)
 
+datasets = [ "ParkingMonitor", "ParkingScoutingMonitor" ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               write_reco = False, write_aod = False, write_miniaod = True, write_dqm = True,
+               tape_node = "T1_US_FNAL_MSS",
+               disk_node = "T1_US_FNAL_Disk",
+               scenario = ppScenario)
+
+datasets = [ "ParkingMonitor_0T", "ParkingScoutingMonitor_0T" ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               write_reco = False, write_aod = False, write_miniaod = True, write_dqm = True,
+               tape_node = "T1_US_FNAL_MSS",
+               disk_node = "T1_US_FNAL_Disk",
+               scenario = ppScenarioB0T)
+    
 #############################
 ### Express configuration ###
 #############################
