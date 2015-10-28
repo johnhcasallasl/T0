@@ -33,11 +33,8 @@ tier0Config = createTier0Config()
 setConfigVersion(tier0Config, "replace with real version")
 
 # Settings up sites
-#processingSite = "T2_CH_CERN_T0"
-#cernPhedexNode = "T2_CH_CERN"
-processingSite = "T2_CH_CERN_AI"
+processingSite = "T0_CH_CERN"
 cernPhedexNode = "T0_CH_CERN_Disk"
-
 
 # Set global parameters:
 #  Acquisition era
@@ -84,7 +81,6 @@ setDefaultScramArch(tier0Config, "slc6_amd64_gcc491")
 setScramArch(tier0Config, "CMSSW_5_3_20", "slc6_amd64_gcc472")
 
 # Configure scenarios
-#ppScenario = "ppRun2"
 ppScenario = "ppRun2"
 ppScenarioB0T = "ppRun2"
 cosmicsScenario = "cosmicsRun2"
@@ -108,9 +104,9 @@ globalTagConnect = "frontier://PromptProd/CMS_CONDITIONS"
 numberOfCores = 4
 
 # Splitting parameters for PromptReco
-defaultRecoSplitting = 2000 * numberOfCores
-hiRecoSplitting = 200 * numberOfCores
-alcarawSplitting = 20000 * numberOfCores
+defaultRecoSplitting = 1000 * numberOfCores
+hiRecoSplitting = 100 * numberOfCores
+alcarawSplitting = 10000 * numberOfCores
 
 #
 # Setup repack and express mappings
@@ -425,20 +421,46 @@ for dataset in datasets:
                physics_skims = [ "LogError", "LogErrorMonitor" ],
                scenario = ppScenarioB0T)
 
+datasets = [ "HINMuon_HFveto" ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               dqm_sequences = [ "@common" ],
+               scenario = ppScenario)
+
+datasets = [ "HINMuon_HFveto_0T" ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               dqm_sequences = [ "@common" ],
+               scenario = ppScenarioB0T)
+
 ################################
 ### Special Totem runs       ###
 ################################
 
-datasets = [ "TOTEM_minBias", "TOTEM_romanPots", "ToTOTEM", "ZeroBiasTotem", "MinimumBiasTotem",
-             "TOTEM_minBias1", "TOTEM_minBias2", "TOTEM_romanPots1", "TOTEM_romanPots2", "TOTEM_romanPots3" ]
+datasets = [ "TOTEM_minBias", "TOTEM_romanPots", "ToTOTEM", "ToTOTEM_DoubleJet32_0", "ToTOTEM_DoubleJet32_1",
+             "ToTOTEM_DoubleJet32_2", "ToTOTEM_DoubleJet32_3", "ZeroBiasTotem", "MinimumBiasTotem",
+             "TOTEM_minBias1", "TOTEM_minBias2", "TOTEM_romanPots1", "TOTEM_romanPots2", "TOTEM_romanPots2_0",
+             "TOTEM_romanPots2_1", "TOTEM_romanPots2_2", "TOTEM_romanPots2_3","TOTEM_romanPots2_4",
+             "TOTEM_romanPots2_5", "TOTEM_romanPots2_6", "TOTEM_romanPots2_7", "TOTEM_romanPots3",
+             "TOTEM_romanPotsTTBB_0", "TOTEM_romanPotsTTBB_1", "TOTEM_romanPotsTTBB_2", "TOTEM_romanPotsTTBB_3",
+             "TOTEM_romanPotsTTBB_4", "TOTEM_romanPotsTTBB_5", "TOTEM_romanPotsTTBB_6", "TOTEM_romanPotsTTBB_7" ]
 
 for dataset in datasets:
     addDataset(tier0Config, dataset,
                do_reco = True,
                scenario = ppScenario)
 
-datasets = [ "TOTEM_minBias_0T", "TOTEM_romanPots_0T", "ToTOTEM_0T", "ZeroBiasTotem_0T", "MinimumBiasTotem_0T",
-             "TOTEM_minBias1_0T", "TOTEM_minBias2_0T", "TOTEM_romanPots1_0T", "TOTEM_romanPots2_0T", 'TOTEM_romanPots3_0T'  ]
+datasets = [ "TOTEM_minBias_0T", "TOTEM_romanPots_0T", "ToTOTEM_0T", "ToTOTEM_DoubleJet32_0_0T", "ToTOTEM_DoubleJet32_1_0T",
+             "ToTOTEM_DoubleJet32_2_0T", "ToTOTEM_DoubleJet32_3_0T", "ZeroBiasTotem_0T", "MinimumBiasTotem_0T",
+             "TOTEM_minBias1_0T", "TOTEM_minBias2_0T", "TOTEM_romanPots1_0T", "TOTEM_romanPots2_0T", "TOTEM_romanPots2_0_0T",
+             "TOTEM_romanPots2_1_0T", "TOTEM_romanPots2_2_0T", "TOTEM_romanPots2_3_0T","TOTEM_romanPots2_4_0T",
+             "TOTEM_romanPots2_5_0T", "TOTEM_romanPots2_6_0T", "TOTEM_romanPots2_7_0T", "TOTEM_romanPots3_0T",
+             "TOTEM_romanPotsTTBB_0_0T", "TOTEM_romanPotsTTBB_1_0T", "TOTEM_romanPotsTTBB_2_0T", "TOTEM_romanPotsTTBB_3_0T",
+             "TOTEM_romanPotsTTBB_4_0T", "TOTEM_romanPotsTTBB_5_0T", "TOTEM_romanPotsTTBB_6_0T", "TOTEM_romanPotsTTBB_7_0T" ]
 
 for dataset in datasets:
     addDataset(tier0Config, dataset,
