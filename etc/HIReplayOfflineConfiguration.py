@@ -76,7 +76,7 @@ setPromptCalibrationConfig(tier0Config,
 
 
 # Defaults for CMSSW version
-defaultCMSSWVersion = "CMSSW_7_5_7_patch2"
+defaultCMSSWVersion = "CMSSW_7_5_7_patch3"
 expressDefaultCMSSWVersion = defaultCMSSWVersion
 
 # Configure ScramArch
@@ -118,24 +118,24 @@ alcarawSplitting = 10000 * numberOfCores
 # Setup repack and express mappings
 #
 repackVersionOverride = {
-    "CMSSW_7_5_0" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_1" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_2" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_3" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_4" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_5" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_6" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_7" : "CMSSW_7_5_7_patch2"
+    "CMSSW_7_5_0" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_1" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_2" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_3" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_4" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_5" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_6" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_7" : "CMSSW_7_5_7_patch3"
     }
 expressVersionOverride = {
-    "CMSSW_7_5_0" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_1" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_2" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_3" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_4" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_5" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_6" : "CMSSW_7_5_7_patch2",
-    "CMSSW_7_5_7" : "CMSSW_7_5_7_patch2"
+    "CMSSW_7_5_0" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_1" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_2" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_3" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_4" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_5" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_6" : "CMSSW_7_5_7_patch3",
+    "CMSSW_7_5_7" : "CMSSW_7_5_7_patch3"
     }
 
 #set default repack settings for bulk streams
@@ -969,12 +969,13 @@ addDataset(tier0Config, "SingleMuLowPt_0T",
 datasets = [ "HIHardProbesPeripheral", "HIHardProbesPhotons", "HIOnia",
              "HIMinimumBias2", "HIMinimumBias3", "HIMinimumBias4",
              "HIMinimumBias5", "HIMinimumBias6", "HIMinimumBias7",
+             "HIMinimumBias8", "HIMinimumBias9", "HIMinimumBias10", "HIMinimumBias11",
              "HIOniaL1DoubleMu0B", "HIOniaL1DoubleMu0C", "HIOniaL1DoubleMu0D" ]
 
 for dataset in datasets:
     addDataset(tier0Config, dataset,
                do_reco = True,
-               multicore = 8,
+               multicore = 6,
                reco_split = hiRecoSplitting,
                write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
                global_tag = hiPromptrecoGlobalTag,
@@ -984,7 +985,7 @@ for dataset in datasets:
 
 addDataset(tier0Config, "HIFlowCorr",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -996,7 +997,7 @@ addDataset(tier0Config, "HIFlowCorr",
 
 addDataset(tier0Config, "HIOniaL1DoubleMu0",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1007,7 +1008,7 @@ addDataset(tier0Config, "HIOniaL1DoubleMu0",
 
 addDataset(tier0Config, "HIHardProbes",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1019,7 +1020,7 @@ addDataset(tier0Config, "HIHardProbes",
 
 addDataset(tier0Config, "HIOniaCentral30L2L3",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1031,7 +1032,7 @@ addDataset(tier0Config, "HIOniaCentral30L2L3",
 
 addDataset(tier0Config, "HIOniaPeripheral30100",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1043,7 +1044,7 @@ addDataset(tier0Config, "HIOniaPeripheral30100",
 
 addDataset(tier0Config, "HIEWQExo",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1055,7 +1056,7 @@ addDataset(tier0Config, "HIEWQExo",
 
 addDataset(tier0Config, "HIOniaTnP",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1066,7 +1067,7 @@ addDataset(tier0Config, "HIOniaTnP",
 
 addDataset(tier0Config, "HIPhoton40AndZ",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1077,7 +1078,7 @@ addDataset(tier0Config, "HIPhoton40AndZ",
 
 addDataset(tier0Config, "HIMinimumBias1",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1087,7 +1088,7 @@ addDataset(tier0Config, "HIMinimumBias1",
 
 addDataset(tier0Config, "HIForward",
            do_reco = True,
-           multicore = 8,
+           multicore = 6,
            reco_split = hiRecoSplitting,
            write_reco = False, write_aod = True, write_miniaod = False, write_dqm = True,
            global_tag = hiPromptrecoGlobalTag,
@@ -1108,7 +1109,7 @@ addExpressConfig(tier0Config, "HIExpress",
                                     "TkAlMinBiasHI", "DtCalibHI", "LumiPixelsMinBias",
                                     "PromptCalibProd", "PromptCalibProdSiStrip", "PromptCalibProdSiStripGains" ],
                  reco_version = expressDefaultCMSSWVersion,
-                 multicore = numberOfCores,
+                 multicore = 6,
                  global_tag_connect = globalTagConnect,
                  global_tag = hiExpressGlobalTag,
                  proc_ver = expressProcVersion,
