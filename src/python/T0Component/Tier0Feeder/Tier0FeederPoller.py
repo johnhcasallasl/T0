@@ -198,9 +198,11 @@ class Tier0FeederPoller(BaseWorkerThread):
         # insert express and reco configs into Tier0 Data Service
         #
         if self.haveT0DataSvc:
+            self.updateRunStreamDoneT0DataSvc()
             self.updateExpressConfigsT0DataSvc()
             self.updateRecoConfigsT0DataSvc()
             self.updateRecoReleaseConfigsT0DataSvc()
+            self.lockDatasetsT0DataSvc()
 
         #
         # mark express and repack workflows as injected if certain conditions are met
@@ -390,6 +392,32 @@ class Tier0FeederPoller(BaseWorkerThread):
 
         return
 
+    def updateRunStreamDoneT0DataSvc(self):
+        """
+        _updateRunStreamDoneT0DataSvc_
+
+        Check if a run/stream workflow (express or repack) is finished and
+        cleaned up and push a completion record into the Tier0 Data Service.
+
+        """
+        getRunStreamDoneDAO = self.daoFactory(classname = "T0DataSvc.GetRunStreamDone")
+        runStreamDone = getRunStreamDoneDAO.execute(transaction = False)
+
+        if len(runStreamDone) > 0:
+
+            binds = []
+            for runStream in runStreamDone:
+                binds.append( { 'RUN' : runStream['run'],
+                                'STREAM' : runStream['stream'] } )
+
+            insertRunStreamDoneDAO = self.daoFactoryT0DataSvc(classname = "T0DataSvc.InsertRunStreamDone")
+            insertRunStreamDoneDAO.execute(binds = binds, transaction = False)
+
+            updateRunStreamDoneDAO = self.daoFactory(classname = "T0DataSvc.UpdateRunStreamDone")
+            updateRunStreamDoneDAO.execute(binds = binds, transaction = False)
+
+        return
+
     def updateExpressConfigsT0DataSvc(self):
         """
         _updateExpressConfigsT0DataSvc_
@@ -495,6 +523,32 @@ class Tier0FeederPoller(BaseWorkerThread):
 
             updateRecoReleaseConfigsDAO = self.daoFactory(classname = "T0DataSvc.UpdateRecoReleaseConfigs")
             updateRecoReleaseConfigsDAO.execute(binds = bindsUpdate, transaction = False)
+
+        return
+
+    def lockDatasetsT0DataSvc(self):
+        """
+        _lockDatasetsT0DataSvc_
+
+        Publish dataset information into the Tier0 Data Service.
+
+        """
+        getDatasetLockedDAO = self.daoFactory(classname = "T0DataSvc.GetDatasetLocked")
+        datasetConfigs = getDatasetLockedDAO.execute(transaction = False)
+
+        if len(datasetConfigs) > 0:
+
+            bindsInsert = []
+            bindsUpdate = []
+            for config in datasetConfigs:
+                bindsInsert.append( { 'PATH' : config['path'] } )
+                bindsUpdate.append( { 'ID' : config['id'] } )
+
+            insertDatasetLockedDAO = self.daoFactoryT0DataSvc(classname = "T0DataSvc.InsertDatasetLocked")
+            insertDatasetLockedDAO.execute(binds = bindsInsert, transaction = False)
+
+            updateDatasetLockedDAO = self.daoFactory(classname = "T0DataSvc.UpdateDatasetLocked")
+            updateDatasetLockedDAO.execute(binds = bindsUpdate, transaction = False)
 
         return
 

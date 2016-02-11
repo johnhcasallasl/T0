@@ -189,6 +189,8 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
             if len(datasets) == 0:
                 raise RuntimeError("Stream is not defined in HLT menu or has no datasets !")
 
+        # write run/stream processing completion record
+        insertRunStreamDoneDAO = daoFactory(classname = "RunConfig.InsertRunStreamDone")
 
         # write stream/dataset mapping (for special express and error datasets)
         insertDatasetDAO = daoFactory(classname = "RunConfig.InsertPrimaryDataset")
@@ -208,6 +210,8 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
         insertStorageNodeDAO = daoFactory(classname = "RunConfig.InsertStorageNode")
         insertPhEDExConfigDAO = daoFactory(classname = "RunConfig.InsertPhEDExConfig")
 
+        bindsRunStreamDone = {'RUN' : run,
+                              'STREAM' : stream}
         bindsCMSSWVersion = []
         bindsDataset = []
         bindsStreamDataset = []
@@ -293,8 +297,9 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                             'TAPE_NODE' : None,
                                             'DISK_NODE' :  runInfo['express_subscribe']} )
 
-                subscriptions.append( { 'custodialSites' : [],
-                                        'nonCustodialSites' : [ runInfo['express_subscribe'] ],
+                subscriptions.append( { 'nonCustodialSites' : [ runInfo['express_subscribe'] ],
+                                        'nonCustodialSubTyp' : "Replica",
+                                        'nonCustodialGroup' : "express",
                                         'autoApproveSites' : [ runInfo['express_subscribe'] ],
                                         'priority' : "high",
                                         'primaryDataset' : specialDataset,
@@ -388,24 +393,34 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
 
                 custodialSites = []
                 nonCustodialSites = []
-                autoApproveSites = []
+                custodialAutoApproveSites = []
+                nonCustodialAutoApproveSites = []
                 if datasetConfig.ArchivalNode:
                     bindsStorageNode.append( { 'NODE' : datasetConfig.ArchivalNode } )
                     custodialSites.append(datasetConfig.ArchivalNode)
-                    autoApproveSites.append(datasetConfig.ArchivalNode)
+                    custodialAutoApproveSites.append(datasetConfig.ArchivalNode)
                 if datasetConfig.TapeNode:
                     bindsStorageNode.append( { 'NODE' : datasetConfig.TapeNode } )
                     custodialSites.append(datasetConfig.TapeNode)
                 if datasetConfig.DiskNode:
                     bindsStorageNode.append( { 'NODE' : datasetConfig.DiskNode } )
                     nonCustodialSites.append(datasetConfig.DiskNode)
-                    autoApproveSites.append(datasetConfig.DiskNode)
+                    nonCustodialAutoApproveSites.append(datasetConfig.DiskNode)
 
-                if len(custodialSites) > 0 or len(nonCustodialSites) > 0:
+                if len(custodialSites) > 0:
                     subscriptions.append( { 'custodialSites' : custodialSites,
                                             'custodialSubType' : "Replica",
-                                            'nonCustodialSites' : nonCustodialSites,
-                                            'autoApproveSites' : autoApproveSites,
+                                            'custodialGroup' : "DataOps",
+                                            'autoApproveSites' : custodialAutoApproveSites,
+                                            'priority' : "high",
+                                            'primaryDataset' : dataset,
+                                            'deleteFromSource' : True,
+                                            'dataTier' : "RAW" } )
+                if len(nonCustodialSites) > 0:
+                    subscriptions.append( { 'nonCustodialSites' : nonCustodialSites,
+                                            'nonCustodialSubType' : "Replica",
+                                            'nonCustodialGroup' : "AnalysisOps",
+                                            'autoApproveSites' : nonCustodialAutoApproveSites,
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
                                             'deleteFromSource' : True,
@@ -414,18 +429,11 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                 #
                 # set subscriptions for error dataset
                 #
-                custodialSites = []
-                nonCustodialSites = []
-                autoApproveSites = []
                 if datasetConfig.ArchivalNode != None:
-                    custodialSites.append(datasetConfig.ArchivalNode)
-                    autoApproveSites.append(datasetConfig.ArchivalNode)
-
-                if len(custodialSites) > 0 or len(nonCustodialSites) > 0:
-                    subscriptions.append( { 'custodialSites' : custodialSites,
+                    subscriptions.append( { 'custodialSites' : [ datasetConfig.ArchivalNode ],
                                             'custodialSubType' : "Replica",
-                                            'nonCustodialSites' : nonCustodialSites,
-                                            'autoApproveSites' : autoApproveSites,
+                                            'custodialGroup' : "DataOps",
+                                            'autoApproveSites' : [ datasetConfig.ArchivalNode ],
                                             'priority' : "high",
                                             'primaryDataset' : "%s-Error" % dataset,
                                             'deleteFromSource' : True,
@@ -450,8 +458,9 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                                 'TAPE_NODE' : None,
                                                 'DISK_NODE' : runInfo['express_subscribe'] } )
 
-                    subscriptions.append( { 'custodialSites' : [],
-                                            'nonCustodialSites' : [ runInfo['express_subscribe'] ],
+                    subscriptions.append( { 'nonCustodialSites' : [ runInfo['express_subscribe'] ],
+                                            'nonCustodialSubType' : "Replica",
+                                            'nonCustodialGroup' : "express",
                                             'autoApproveSites' : [ runInfo['express_subscribe'] ],
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
@@ -503,11 +512,19 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
 
             specArguments['TimePerEvent'] = streamConfig.Express.TimePerEvent
             specArguments['SizePerEvent'] = streamConfig.Express.SizePerEvent
-            specArguments['Memory'] = 2500
+
+            if streamConfig.Express.Scenario == "HeavyIonsRun2":
+                baseMemory = 3000
+                perCoreMemory = 1300
+            else:
+                baseMemory = 2000
+                perCoreMemory = 500
+
+            specArguments['Memory'] = baseMemory + perCoreMemory
 
             if streamConfig.Express.Multicore:
                 specArguments['Multicore'] = streamConfig.Express.Multicore
-                specArguments['Memory'] = 2500 + (streamConfig.Express.Multicore - 1) * 500
+                specArguments['Memory'] += (streamConfig.Express.Multicore - 1) * perCoreMemory
 
             specArguments['RequestPriority'] = tier0Config.Global.BaseRequestPriority + 10000
 
@@ -577,8 +594,10 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                    { 'vogroup': 'DEFAULT', 'vorole': 'DEFAULT',
                                      'dn' : "Dirk.Hufnagel@cern.ch" } )
 
-            wmSpec.setupPerformanceMonitoring(maxRSS = 10485760, maxVSize = 10485760,
-                                              softTimeout = 604800, gracePeriod = 3600)
+            wmSpec.setupPerformanceMonitoring(maxRSS = 1024 * specArguments['Memory'] + 10,
+                                              maxVSize = 104857600, #100GB, effectively disabled
+                                              softTimeout = 604800, #7 days, effectively disabled
+                                              gracePeriod = 3600)
 
             wmbsHelper = WMBSHelper(wmSpec, taskName, cachepath = specDirectory)
 
@@ -610,6 +629,7 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                 insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
             if len(bindsPhEDExConfig) > 0:
                 insertPhEDExConfigDAO.execute(bindsPhEDExConfig, conn = myThread.transaction.conn, transaction = True)
+            insertRunStreamDoneDAO.execute(bindsRunStreamDone, conn = myThread.transaction.conn, transaction = True)
             insertStreamStyleDAO.execute(bindsStreamStyle, conn = myThread.transaction.conn, transaction = True)
             if streamConfig.ProcessingStyle in [ 'Bulk', 'Express' ]:
                 insertStreamFilesetDAO.execute(run, stream, filesetName, conn = myThread.transaction.conn, transaction = True)
@@ -759,145 +779,76 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 phedexConfig = phedexConfigs[dataset]
 
-                # do things different based on whether we have TapeNode/DiskNode or ArchivalNode
-                if phedexConfig['tape_node'] != None and phedexConfig['disk_node'] != None:
+                tapeDataTiers = set()
+                diskDataTiers = set()
+                if datasetConfig.WriteRECO:
+                    diskDataTiers.add("RECO")
+                if datasetConfig.WriteAOD:
+                    tapeDataTiers.add("AOD")
+                    diskDataTiers.add("AOD")
+                if datasetConfig.WriteMINIAOD:
+                    tapeDataTiers.add("MINIAOD")
+                    diskDataTiers.add("MINIAOD")
+                if len(datasetConfig.PhysicsSkims) > 0:
+                    tapeDataTiers.add("RAW-RECO")
+                    diskDataTiers.add("RAW-RECO")
+                    tapeDataTiers.add("USER")
+                    diskDataTiers.add("USER")
+                if len(datasetConfig.AlcaSkims):
+                    tapeDataTiers.add("ALCARECO")
+                if datasetConfig.WriteDQM:
+                    tapeDataTiers.add(tier0Config.Global.DQMDataTier)
 
-                    if datasetConfig.WriteAOD:
+                # do things different based on whether we have TapeNode/DiskNode, only TapeNode or ArchivalNode
+                if phedexConfig['tape_node'] != None:
+
+                    if phedexConfig['disk_node'] == None:
+                        diskDataTiers = set()
+
+                    for dataTier in tapeDataTiers & diskDataTiers:
                         subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
                                                 'custodialSubType' : "Replica",
+                                                'custodialGroup' : "DataOps",
                                                 'nonCustodialSites' : [phedexConfig['disk_node']],
+                                                'nonCustodialSubType' : "Replica",
+                                                'nonCustodialGroup' : "AnalysisOps",
                                                 'autoApproveSites' : [phedexConfig['disk_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
                                                 'deleteFromSource' : True,
-                                                'dataTier' : "AOD" } )
+                                                'dataTier' : dataTier } )
 
-                    if datasetConfig.WriteMINIAOD:
+                    for dataTier in tapeDataTiers - diskDataTiers:
                         subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
                                                 'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [phedexConfig['disk_node']],
-                                                'autoApproveSites' : [phedexConfig['disk_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : "MINIAOD" } )
-
-                    if len(datasetConfig.AlcaSkims) > 0:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
+                                                'custodialGroup' : "DataOps",
                                                 'autoApproveSites' : [],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
                                                 'deleteFromSource' : True,
-                                                'dataTier' : "ALCARECO" } )
+                                                'dataTier' : dataTier } )
 
-                    if len(datasetConfig.PhysicsSkims) > 0:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [phedexConfig['disk_node']],
+                    for dataTier in diskDataTiers - tapeDataTiers:
+                        subscriptions.append( { 'nonCustodialSites' : [phedexConfig['disk_node']],
+                                                'nonCustodialSubType' : "Replica",
+                                                'nonCustodialGroup' : "AnalysisOps",
                                                 'autoApproveSites' : [phedexConfig['disk_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
                                                 'deleteFromSource' : True,
-                                                'dataTier' : "RAW-RECO" } )
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [phedexConfig['disk_node']],
-                                                'autoApproveSites' : [phedexConfig['disk_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : "USER" } )
-
-                    if datasetConfig.WriteDQM:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : tier0Config.Global.DQMDataTier } )
-
-                    if datasetConfig.WriteRECO:
-                        subscriptions.append( { 'custodialSites' : [],
-                                                'nonCustodialSites' : [phedexConfig['disk_node']],
-                                                'autoApproveSites' : [phedexConfig['disk_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : "RECO" } )
+                                                'dataTier' : dataTier } )
 
                 elif phedexConfig['archival_node'] != None:
 
-                    if datasetConfig.WriteAOD:
+                    for dataTier in tapeDataTiers | diskDataTiers:
                         subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
                                                 'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
+                                                'custodialGroup' : "DataOps",
                                                 'autoApproveSites' : [phedexConfig['archival_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
                                                 'deleteFromSource' : True,
-                                                'dataTier' : "AOD" } )
-
-                    if datasetConfig.WriteMINIAOD:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : "MINIAOD" } )
-
-                    if len(datasetConfig.AlcaSkims) > 0:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : "ALCARECO" } )
-
-                    if len(datasetConfig.PhysicsSkims) > 0:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : "RAW-RECO" } )
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : "USER" } )
-
-                    if datasetConfig.WriteDQM:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : tier0Config.Global.DQMDataTier } )
-
-                    if datasetConfig.WriteRECO:
-                        subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
-                                                'custodialSubType' : "Replica",
-                                                'nonCustodialSites' : [],
-                                                'autoApproveSites' : [phedexConfig['archival_node']],
-                                                'priority' : "high",
-                                                'primaryDataset' : dataset,
-                                                'deleteFromSource' : True,
-                                                'dataTier' : "RECO" } )
+                                                'dataTier' : dataTier } )
 
             writeTiers = []
             if datasetConfig.WriteRECO:
@@ -923,11 +874,19 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 specArguments['TimePerEvent'] = datasetConfig.TimePerEvent
                 specArguments['SizePerEvent'] = datasetConfig.SizePerEvent
-                specArguments['Memory'] = 2500
+
+                if datasetConfig.Scenario == "HeavyIonsRun2":
+                    baseMemory = 3000
+                    perCoreMemory = 1300
+                else:
+                    baseMemory = 2000
+                    perCoreMemory = 500
+
+                specArguments['Memory'] = baseMemory + perCoreMemory
 
                 if datasetConfig.Multicore:
                     specArguments['Multicore'] = datasetConfig.Multicore
-                    specArguments['Memory'] = 2500 + (datasetConfig.Multicore - 1) * 500
+                    specArguments['Memory'] += (datasetConfig.Multicore - 1) * perCoreMemory
 
                 specArguments['Memory'] += len(datasetConfig.PhysicsSkims) * 100
 
@@ -986,8 +945,10 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                        { 'vogroup': 'DEFAULT', 'vorole': 'DEFAULT',
                                          'dn' : "Dirk.Hufnagel@cern.ch" } )
 
-                wmSpec.setupPerformanceMonitoring(maxRSS = 10485760, maxVSize = 10485760,
-                                                  softTimeout = 604800, gracePeriod = 3600)
+                wmSpec.setupPerformanceMonitoring(maxRSS = 1024 * specArguments['Memory'] + 10,
+                                                  maxVSize = 104857600, #100GB, effectively disabled
+                                                  softTimeout = 604800, #7 days, effectively disabled
+                                                  gracePeriod = 3600)
 
                 wmbsHelper = WMBSHelper(wmSpec, taskName, cachepath = specDirectory)
 

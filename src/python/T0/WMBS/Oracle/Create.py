@@ -179,6 +179,14 @@ class Create(DBCreator):
                )"""
 
         self.create[len(self.create)] = \
+            """CREATE TABLE run_stream_done (
+                 run_id      int not null,
+                 stream_id   int not null,
+                 in_datasvc  int default 0 not null,
+                 primary key(run_id, stream_id)
+               )"""
+
+        self.create[len(self.create)] = \
             """CREATE TABLE reco_release_config (
                  run_id         int not null,
                  primds_id      int not null,
@@ -344,6 +352,12 @@ class Create(DBCreator):
                ) ORGANIZATION INDEX"""
 
         self.create[len(self.create)] = \
+            """CREATE TABLE dataset_locked (
+                 dataset_id  int not null,
+                 primary key (dataset_id)
+               ) ORGANIZATION INDEX"""
+
+        self.create[len(self.create)] = \
             """CREATE FUNCTION checkForZeroState (value IN int)
                RETURN int DETERMINISTIC IS
                BEGIN
@@ -426,6 +440,9 @@ class Create(DBCreator):
 
         self.indexes[len(self.indexes)] = \
             """CREATE INDEX idx_run_primds_stream_1 ON run_primds_stream_assoc (run_id, stream_id)"""
+
+        self.indexes[len(self.indexes)] = \
+            """CREATE INDEX idx_run_stream_done_1 ON run_stream_done (checkForZeroOneState(in_datasvc))"""
 
         self.indexes[len(self.indexes)] = \
             """CREATE INDEX idx_reco_release_config_2 ON reco_release_config (checkForZeroOneState(in_datasvc))"""
@@ -600,6 +617,18 @@ class Create(DBCreator):
                  FOREIGN KEY (fileset)
                  REFERENCES wmbs_fileset(id)
                  ON DELETE CASCADE"""
+
+        self.constraints[len(self.constraints)] = \
+            """ALTER TABLE run_stream_done
+                 ADD CONSTRAINT run_str_don_run_id_fk
+                 FOREIGN KEY (run_id)
+                 REFERENCES run(run_id)"""
+
+        self.constraints[len(self.constraints)] = \
+            """ALTER TABLE run_stream_done
+                 ADD CONSTRAINT run_str_don_str_id_fk
+                 FOREIGN KEY (stream_id)
+                 REFERENCES stream(id)"""
 
         self.constraints[len(self.constraints)] = \
             """ALTER TABLE reco_release_config
@@ -801,6 +830,13 @@ class Create(DBCreator):
                  ADD CONSTRAINT wor_mon_wor_fk
                  FOREIGN KEY (workflow)
                  REFERENCES wmbs_workflow(id)
+                 ON DELETE CASCADE"""
+
+        self.constraints[len(self.constraints)] = \
+            """ALTER TABLE dataset_locked
+                 ADD CONSTRAINT dat_loc
+                 FOREIGN KEY (dataset_id)
+                 REFERENCES dbsbuffer_dataset(id)
                  ON DELETE CASCADE"""
 
         subTypes = ["Express", "Repack"]
