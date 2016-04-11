@@ -57,19 +57,14 @@ def configureRun(tier0Config, run, hltConfig, referenceHltConfig = None):
         insertDatasetTriggerDAO = daoFactory(classname = "RunConfig.InsertDatasetTrigger")
 
         bindsStorageNode = []
-        for node in list(set([tier0Config.Global.BulkInjectNode,
-                              tier0Config.Global.ExpressInjectNode,
-                              tier0Config.Global.ExpressSubscribeNode])):
-            if node:
-                bindsStorageNode.append( { 'NODE' : node } )
+        if tier0Config.Global.ExpressSubscribeNode:
+            bindsStorageNode.append( { 'NODE' : tier0Config.Global.ExpressSubscribeNode } )
 
         bindsUpdateRun = { 'RUN' : run,
                            'PROCESS' : hltConfig['process'],
                            'ACQERA' : tier0Config.Global.AcquisitionEra,
                            'BACKFILL' : tier0Config.Global.Backfill,
                            'BULKDATATYPE' : tier0Config.Global.BulkDataType,
-                           'BULK_INJECT' : tier0Config.Global.BulkInjectNode,
-                           'EXPRESS_INJECT' : tier0Config.Global.ExpressInjectNode,
                            'EXPRESS_SUBSCRIBE' : tier0Config.Global.ExpressSubscribeNode,
                            'DQMUPLOADURL' : tier0Config.Global.DQMUploadUrl,
                            'AHTIMEOUT' : tier0Config.Global.AlcaHarvestTimeout,
@@ -108,7 +103,8 @@ def configureRun(tier0Config, run, hltConfig, referenceHltConfig = None):
 
         try:
             myThread.transaction.begin()
-            insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
+            if len(bindsStorageNode) > 0:
+                insertStorageNodeDAO.execute(bindsStorageNode, conn = myThread.transaction.conn, transaction = True)
             updateRunDAO.execute(bindsUpdateRun, conn = myThread.transaction.conn, transaction = True)
             insertStreamDAO.execute(bindsStream, conn = myThread.transaction.conn, transaction = True)
             insertDatasetDAO.execute(bindsDataset, conn = myThread.transaction.conn, transaction = True)
@@ -298,12 +294,12 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                             'DISK_NODE' :  runInfo['express_subscribe']} )
 
                 subscriptions.append( { 'nonCustodialSites' : [ runInfo['express_subscribe'] ],
-                                        'nonCustodialSubTyp' : "Replica",
+                                        'nonCustodialSubType' : "Replica",
                                         'nonCustodialGroup' : "express",
                                         'autoApproveSites' : [ runInfo['express_subscribe'] ],
                                         'priority' : "high",
                                         'primaryDataset' : specialDataset,
-                                        'deleteFromSource' : True } )
+                                        'deleteFromSource' : bool(runInfo['express_subscribe']) } )
 
             alcaSkim = None
             if len(streamConfig.Express.AlcaSkims) > 0:
@@ -464,7 +460,7 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
                                             'autoApproveSites' : [ runInfo['express_subscribe'] ],
                                             'priority' : "high",
                                             'primaryDataset' : dataset,
-                                            'deleteFromSource' : True } )
+                                            'deleteFromSource' : bool(runInfo['express_subscribe']) } )
 
         #
         # finally create WMSpec
@@ -584,13 +580,11 @@ def configureRunStream(tier0Config, run, stream, specDirectory, dqmUploadProxy):
         if streamConfig.ProcessingStyle == "Bulk":
             factory = RepackWorkloadFactory()
             wmSpec = factory.factoryWorkloadConstruction(workflowName, specArguments)
-            #wmSpec.setPhEDExInjectionOverride(runInfo['bulk_inject'])
             for subscription in subscriptions:
                 wmSpec.setSubscriptionInformation(**subscription)
         elif streamConfig.ProcessingStyle == "Express":
             factory = ExpressWorkloadFactory()
             wmSpec = factory.factoryWorkloadConstruction(workflowName, specArguments)
-            #wmSpec.setPhEDExInjectionOverride(runInfo['express_inject'])
             for subscription in subscriptions:
                 wmSpec.setSubscriptionInformation(**subscription)
 
@@ -668,8 +662,7 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
     Called by Tier0Feeder
 
     Finds all run/primds that need to be released for PromptReco
-    ( run.end_time + reco_release_config.delay > now
-      AND run.end_time > 0 )
+    ( run.stop_time + reco_release_config.delay > now AND run.stop_time > 0 )
 
     Create workflows and subscriptions for the processing
     of runs/datasets.
@@ -786,6 +779,9 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 tapeDataTiers = set()
                 diskDataTiers = set()
+                skimDataTiers = set()
+                alcaDataTiers = set()
+
                 if datasetConfig.WriteRECO:
                     diskDataTiers.add("RECO")
                 if datasetConfig.WriteAOD:
@@ -794,15 +790,15 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                 if datasetConfig.WriteMINIAOD:
                     tapeDataTiers.add("MINIAOD")
                     diskDataTiers.add("MINIAOD")
-                if len(datasetConfig.PhysicsSkims) > 0:
-                    tapeDataTiers.add("RAW-RECO")
-                    diskDataTiers.add("RAW-RECO")
-                    tapeDataTiers.add("USER")
-                    diskDataTiers.add("USER")
-                if len(datasetConfig.AlcaSkims):
-                    tapeDataTiers.add("ALCARECO")
                 if datasetConfig.WriteDQM:
                     tapeDataTiers.add(tier0Config.Global.DQMDataTier)
+                if len(datasetConfig.PhysicsSkims) > 0:
+                    skimDataTiers.add("RAW-RECO")
+                    skimDataTiers.add("USER")
+                    skimDataTiers.add("RECO")
+                    skimDataTiers.add("AOD")
+                if len(datasetConfig.AlcaSkims) > 0:
+                    alcaDataTiers.add("ALCARECO")
 
                 # do things different based on whether we have TapeNode/DiskNode, only TapeNode or ArchivalNode
                 if phedexConfig['tape_node'] != None:
@@ -820,6 +816,23 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                                 'autoApproveSites' : [phedexConfig['disk_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : False,
+                                                'deleteFromSource' : True,
+                                                'dataTier' : dataTier } )
+
+                    for dataTier in skimDataTiers:
+                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
+                                                'custodialSubType' : "Replica",
+                                                'custodialGroup' : "DataOps",
+                                                'nonCustodialSites' : [phedexConfig['disk_node']] if phedexConfig['disk_node'] else [],
+                                                'nonCustodialSubType' : "Replica",
+                                                'nonCustodialGroup' : "AnalysisOps",
+                                                'autoApproveSites' : [phedexConfig['disk_node']] if phedexConfig['disk_node'] else [],
+                                                'priority' : "high",
+                                                'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : True,
                                                 'deleteFromSource' : True,
                                                 'dataTier' : dataTier } )
 
@@ -830,6 +843,20 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                                 'autoApproveSites' : [],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : False,
+                                                'deleteFromSource' : True,
+                                                'dataTier' : dataTier } )
+
+                    for dataTier in alcaDataTiers:
+                        subscriptions.append( { 'custodialSites' : [phedexConfig['tape_node']],
+                                                'custodialSubType' : "Replica",
+                                                'custodialGroup' : "DataOps",
+                                                'autoApproveSites' : [],
+                                                'priority' : "high",
+                                                'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : True,
                                                 'deleteFromSource' : True,
                                                 'dataTier' : dataTier } )
 
@@ -840,12 +867,15 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
                                                 'autoApproveSites' : [phedexConfig['disk_node']],
                                                 'priority' : "high",
                                                 'primaryDataset' : dataset,
+                                                'useSkim' : True,
+                                                'isSkim' : False,
                                                 'deleteFromSource' : True,
                                                 'dataTier' : dataTier } )
 
                 elif phedexConfig['archival_node'] != None:
 
-                    for dataTier in tapeDataTiers | diskDataTiers:
+                    for dataTier in tapeDataTiers | diskDataTiers | skimDataTiers | alcaDataTiers:
+
                         subscriptions.append( { 'custodialSites' : [phedexConfig['archival_node']],
                                                 'custodialSubType' : "Replica",
                                                 'custodialGroup' : "DataOps",
@@ -941,8 +971,6 @@ def releasePromptReco(tier0Config, specDirectory, dqmUploadProxy):
 
                 factory = PromptRecoWorkloadFactory()
                 wmSpec = factory.factoryWorkloadConstruction(workflowName, specArguments)
-
-                #wmSpec.setPhEDExInjectionOverride(runInfo['bulk_inject'])
                 for subscription in subscriptions:
                     wmSpec.setSubscriptionInformation(**subscription)
 

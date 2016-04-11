@@ -55,7 +55,7 @@ class Create(DBCreator):
         self.create[len(self.create)] = \
             """CREATE TABLE event_scenario (
                  id     int          not null,
-                 name   varchar2(25) not null,
+                 name   varchar2(50) not null,
                  primary key(id),
                  constraint eve_sce_name_uq unique(name)
                ) ORGANIZATION INDEX"""
@@ -108,15 +108,13 @@ class Create(DBCreator):
                  express_released   int           default 0 not null,
                  hltkey             varchar2(255) not null,
                  start_time         int           not null,
-                 end_time           int           default 0 not null,
+                 stop_time          int           default 0 not null,
                  close_time         int           default 0 not null,
                  lumicount          int           default 0 not null,
                  process            varchar2(255),
                  acq_era            varchar2(255),
                  backfill           varchar2(255),
                  bulk_data_type     varchar2(255),
-                 bulk_inject        int,
-                 express_inject     int,
                  express_subscribe  int,
                  dqmuploadurl       varchar2(255),
                  ah_timeout         int,
@@ -490,18 +488,6 @@ class Create(DBCreator):
                  ADD CONSTRAINT run_sta_fk
                  FOREIGN KEY (status)
                  REFERENCES run_status(id)"""
-
-        self.constraints[len(self.constraints)] = \
-            """ALTER TABLE run
-                 ADD CONSTRAINT run_bul_inj
-                 FOREIGN KEY (bulk_inject)
-                 REFERENCES storage_node(id)"""
-
-        self.constraints[len(self.constraints)] = \
-            """ALTER TABLE run
-                 ADD CONSTRAINT run_exp_inj
-                 FOREIGN KEY (express_inject)
-                 REFERENCES storage_node(id)"""
 
         self.constraints[len(self.constraints)] = \
             """ALTER TABLE run
@@ -902,7 +888,8 @@ class Create(DBCreator):
                            19 : "hcalnzsEra_Run2_25ns",
                            20 : "ppEra_Run2_2016",
                            21 : "cosmicsEra_Run2_2016",
-                           22 : "hcalnzsEra_Run2_2016" }
+                           22 : "hcalnzsEra_Run2_2016",
+                           23 : "ppEra_Run2_2016_trackingLowPU" }
         for id, name in eventScenarios.items():
             sql = """INSERT INTO event_scenario
                      (ID, NAME)

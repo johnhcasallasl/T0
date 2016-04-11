@@ -14,8 +14,6 @@ from T0.RunConfig.Tier0Config import setBaseRequestPriority
 from T0.RunConfig.Tier0Config import setBackfill
 from T0.RunConfig.Tier0Config import setBulkDataType
 from T0.RunConfig.Tier0Config import setProcessingSite
-from T0.RunConfig.Tier0Config import setBulkInjectNode
-from T0.RunConfig.Tier0Config import setExpressInjectNode
 from T0.RunConfig.Tier0Config import setExpressSubscribeNode
 from T0.RunConfig.Tier0Config import setDQMDataTier
 from T0.RunConfig.Tier0Config import setDQMUploadUrl
@@ -35,7 +33,6 @@ setConfigVersion(tier0Config, "replace with real version")
 
 # Settings up sites
 processingSite = "T0_CH_CERN"
-cernPhedexNode = "T0_CH_CERN_Disk"
 
 # Set global parameters:
 #  Acquisition era
@@ -49,8 +46,6 @@ setBaseRequestPriority(tier0Config, 200000)
 setBackfill(tier0Config, 1)
 setBulkDataType(tier0Config, "data")
 setProcessingSite(tier0Config, processingSite)
-setBulkInjectNode(tier0Config, cernPhedexNode)
-setExpressInjectNode(tier0Config, cernPhedexNode)
 setExpressSubscribeNode(tier0Config, None)
 
 # Override for DQM data tier
@@ -75,7 +70,7 @@ setPromptCalibrationConfig(tier0Config,
                            validationMode = True)
 
 # Defaults for CMSSW version
-defaultCMSSWVersion = "CMSSW_8_0_2"
+defaultCMSSWVersion = "CMSSW_8_0_3_patch1"
 
 # Configure ScramArch
 setDefaultScramArch(tier0Config, "slc6_amd64_gcc493")
@@ -92,9 +87,9 @@ expressProcVersion = 1
 alcarawProcVersion = 1
 
 # Defaults for GlobalTag
-expressGlobalTag = "80X_dataRun2_Express_v3"
-promptrecoGlobalTag = "80X_dataRun2_Prompt_v3"
-alcap0GlobalTag = "80X_dataRun2_Prompt_v3"
+expressGlobalTag = "80X_dataRun2_Express_v4"
+promptrecoGlobalTag = "80X_dataRun2_Prompt_v4"
+alcap0GlobalTag = "80X_dataRun2_Prompt_v4"
 
 # Mandatory for CondDBv2
 globalTagConnect = "frontier://PromptProd/CMS_CONDITIONS"
