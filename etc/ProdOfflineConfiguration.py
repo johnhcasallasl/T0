@@ -41,7 +41,7 @@ processingSite = "T0_CH_CERN"
 #  Data type
 #  Processing site (where jobs run)
 #  PhEDEx locations
-setAcquisitionEra(tier0Config, "Run2016D")
+setAcquisitionEra(tier0Config, "Run2016E")
 setBaseRequestPriority(tier0Config, 250000)
 setBackfill(tier0Config, None)
 setBulkDataType(tier0Config, "data")
@@ -76,7 +76,11 @@ setPromptCalibrationConfig(tier0Config,
 #   'default': Value5 }
 
 # Defaults for CMSSW version
-defaultCMSSWVersion = "CMSSW_8_0_13_patch1"
+defaultCMSSWVersion =
+     {
+       'acqEra': {'Run2016D': "CMSSW_8_0_13_patch1"},
+       'default': "CMSSW_8_0_14"
+     }
 
 # Configure ScramArch
 setDefaultScramArch(tier0Config, "slc6_amd64_gcc493")
@@ -86,6 +90,7 @@ setScramArch(tier0Config, "CMSSW_8_0_10_patch1", "slc6_amd64_gcc530")
 setScramArch(tier0Config, "CMSSW_8_0_11", "slc6_amd64_gcc530")
 setScramArch(tier0Config, "CMSSW_8_0_12", "slc6_amd64_gcc530")
 setScramArch(tier0Config, "CMSSW_8_0_13_patch1", "slc6_amd64_gcc530")
+setScramArch(tier0Config, "CMSSW_8_0_14", "slc6_amd64_gcc530")
 
 # Configure scenarios
 ppScenario = "ppEra_Run2_2016"
@@ -100,9 +105,9 @@ expressProcVersion = 2
 alcarawProcVersion = 2
 
 # Defaults for GlobalTag
-expressGlobalTag = "80X_dataRun2_Express_v10"
-promptrecoGlobalTag = "80X_dataRun2_Prompt_v9"
-alcap0GlobalTag = "80X_dataRun2_Prompt_v9"
+expressGlobalTag = "80X_dataRun2_Express_v11"
+promptrecoGlobalTag = "80X_dataRun2_Prompt_v10"
+alcap0GlobalTag = "80X_dataRun2_Prompt_v10"
 
 # Mandatory for CondDBv2
 globalTagConnect = "frontier://PromptProd/CMS_CONDITIONS"
@@ -119,38 +124,25 @@ alcarawSplitting = 20000 * numberOfCores
 # Setup repack and express mappings
 #
 repackVersionOverride = {
-    "CMSSW_7_5_8" : "CMSSW_7_5_8_patch3",
-    "CMSSW_8_0_0" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_1" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_2" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_3" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_4" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_5" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_6" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_7" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_8" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_9" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_10" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_11" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_12" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_13" : "CMSSW_8_0_13_patch1"
+    "CMSSW_7_5_8" : "CMSSW_7_5_8_patch3"
     }
+
 expressVersionOverride = {
     "CMSSW_7_5_8" : "CMSSW_7_5_8_patch3",
-    "CMSSW_8_0_0" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_1" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_2" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_3" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_4" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_5" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_6" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_7" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_8" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_9" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_10" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_11" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_12" : "CMSSW_8_0_13_patch1",
-    "CMSSW_8_0_13" : "CMSSW_8_0_13_patch1"
+    "CMSSW_8_0_0" : "CMSSW_8_0_14",
+    "CMSSW_8_0_1" : "CMSSW_8_0_14",
+    "CMSSW_8_0_2" : "CMSSW_8_0_14",
+    "CMSSW_8_0_3" : "CMSSW_8_0_14",
+    "CMSSW_8_0_4" : "CMSSW_8_0_14",
+    "CMSSW_8_0_5" : "CMSSW_8_0_14",
+    "CMSSW_8_0_6" : "CMSSW_8_0_14",
+    "CMSSW_8_0_7" : "CMSSW_8_0_14",
+    "CMSSW_8_0_8" : "CMSSW_8_0_14",
+    "CMSSW_8_0_9" : "CMSSW_8_0_14",
+    "CMSSW_8_0_10" : "CMSSW_8_0_14",
+    "CMSSW_8_0_11" : "CMSSW_8_0_14",
+    "CMSSW_8_0_12" : "CMSSW_8_0_14",
+    "CMSSW_8_0_13" : "CMSSW_8_0_14"
     }
 
 #set default repack settings for bulk streams
@@ -182,7 +174,7 @@ addDataset(tier0Config, "Default",
            archival_node = "T0_CH_CERN_MSS",
            tape_node = "T1_US_FNAL_MSS",
            disk_node = "T1_US_FNAL_Disk",
-           raw_to_disk = True,
+           raw_to_disk = False,
            blockCloseDelay = 24 * 3600,
            timePerEvent = 5,
            sizePerEvent = 1500,
@@ -642,7 +634,7 @@ for dataset in datasets:
                dqm_sequences = [ "@common" ],
                tape_node = "T1_US_FNAL_MSS",
                disk_node = "T1_US_FNAL_Disk",
-               physics_skims = [ "LogError", "LogErrorMonitor" ],
+               physics_skims = [ "LogError", "LogErrorMonitor", "BPHSkim" ],
                scenario = ppScenario)
 
 datasets = [ "DoubleMuonLowMass_0T" ]
@@ -653,7 +645,7 @@ for dataset in datasets:
                dqm_sequences = [ "@common" ],
                tape_node = "T1_US_FNAL_MSS",
                disk_node = "T1_US_FNAL_Disk",
-               physics_skims = [ "LogError", "LogErrorMonitor" ],
+               physics_skims = [ "LogError", "LogErrorMonitor", "BPHSkim" ],
                scenario = ppScenarioB0T)
 
 datasets = [ "HTMHT" ]
@@ -736,7 +728,7 @@ for dataset in datasets:
                tape_node = "T1_FR_CCIN2P3_MSS",
                disk_node = "T1_FR_CCIN2P3_Disk",
                alca_producers = [ "TkAlJpsiMuMu" ],
-               physics_skims = [ "LogError", "LogErrorMonitor" ],
+               physics_skims = [ "LogError", "LogErrorMonitor", "BPHSkim" ],
                scenario = ppScenario)
 
 datasets = [ "Charmonium_0T" ]
@@ -749,7 +741,7 @@ for dataset in datasets:
                tape_node = "T1_FR_CCIN2P3_MSS",
                disk_node = "T1_FR_CCIN2P3_Disk",
                alca_producers = [ "TkAlJpsiMuMu" ],
-               physics_skims = [ "LogError", "LogErrorMonitor" ],
+               physics_skims = [ "LogError", "LogErrorMonitor", "BPHSkim" ],
                scenario = ppScenarioB0T)
 
 datasets = [ "DoubleEG" ]
@@ -932,7 +924,7 @@ for dataset in datasets:
                disk_node = "T1_US_FNAL_Disk",
                alca_producers = [ "TkAlUpsilonMuMu" ],
                dqm_sequences = [ "@common", "@muon" ],
-               physics_skims = [ "LogError", "LogErrorMonitor" ],
+               physics_skims = [ "LogError", "LogErrorMonitor", "BPHSkim" ],
                scenario = ppScenario)
 
 datasets = [ "MuOnia_0T" ]
@@ -945,7 +937,7 @@ for dataset in datasets:
                disk_node = "T1_US_FNAL_Disk",
                alca_producers = [ "TkAlUpsilonMuMu" ],
                dqm_sequences = [ "@common", "@muon" ],
-               physics_skims = [ "LogError", "LogErrorMonitor" ],
+               physics_skims = [ "LogError", "LogErrorMonitor", "BPHSkim" ],
                scenario = ppScenarioB0T)
 
 datasets = [ "SingleElectron" ]
