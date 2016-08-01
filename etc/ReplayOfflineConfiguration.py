@@ -70,17 +70,10 @@ setPromptCalibrationConfig(tier0Config,
                            validationMode = True)
 
 # Defaults for CMSSW version
-defaultCMSSWVersion = "CMSSW_8_0_14"
+defaultCMSSWVersion = "CMSSW_8_0_15"
 
 # Configure ScramArch
-setDefaultScramArch(tier0Config, "slc6_amd64_gcc493")
-setScramArch(tier0Config, "CMSSW_7_5_8", "slc6_amd64_gcc491")
-setScramArch(tier0Config, "CMSSW_7_5_8_patch3", "slc6_amd64_gcc491")
-setScramArch(tier0Config, "CMSSW_8_0_10_patch1", "slc6_amd64_gcc530")
-setScramArch(tier0Config, "CMSSW_8_0_11", "slc6_amd64_gcc530")
-setScramArch(tier0Config, "CMSSW_8_0_12", "slc6_amd64_gcc530")
-setScramArch(tier0Config, "CMSSW_8_0_13_patch1", "slc6_amd64_gcc530")
-setScramArch(tier0Config, "CMSSW_8_0_14", "slc6_amd64_gcc530")
+setDefaultScramArch(tier0Config, "slc6_amd64_gcc530")
 
 # Configure scenarios
 #ppScenario = "ppEra_Run2_25ns"
@@ -118,25 +111,24 @@ alcarawSplitting = 10000 * numberOfCores
 # Setup repack and express mappings
 #
 repackVersionOverride = {
-    "CMSSW_7_5_8" : "CMSSW_7_5_8_patch3"
     }
 
 expressVersionOverride = {
-    "CMSSW_7_5_8" : "CMSSW_7_5_8_patch3",
-    "CMSSW_8_0_0" : "CMSSW_8_0_14",
-    "CMSSW_8_0_1" : "CMSSW_8_0_14",
-    "CMSSW_8_0_2" : "CMSSW_8_0_14",
-    "CMSSW_8_0_3" : "CMSSW_8_0_14",
-    "CMSSW_8_0_4" : "CMSSW_8_0_14",
-    "CMSSW_8_0_5" : "CMSSW_8_0_14",
-    "CMSSW_8_0_6" : "CMSSW_8_0_14",
-    "CMSSW_8_0_7" : "CMSSW_8_0_14",
-    "CMSSW_8_0_8" : "CMSSW_8_0_14",
-    "CMSSW_8_0_9" : "CMSSW_8_0_14",
-    "CMSSW_8_0_10" : "CMSSW_8_0_14",
-    "CMSSW_8_0_11" : "CMSSW_8_0_14",
-    "CMSSW_8_0_12" : "CMSSW_8_0_14",
-    "CMSSW_8_0_13" : "CMSSW_8_0_14"
+    "CMSSW_8_0_0" : "CMSSW_8_0_15",
+    "CMSSW_8_0_1" : "CMSSW_8_0_15",
+    "CMSSW_8_0_2" : "CMSSW_8_0_15",
+    "CMSSW_8_0_3" : "CMSSW_8_0_15",
+    "CMSSW_8_0_4" : "CMSSW_8_0_15",
+    "CMSSW_8_0_5" : "CMSSW_8_0_15",
+    "CMSSW_8_0_6" : "CMSSW_8_0_15",
+    "CMSSW_8_0_7" : "CMSSW_8_0_15",
+    "CMSSW_8_0_8" : "CMSSW_8_0_15",
+    "CMSSW_8_0_9" : "CMSSW_8_0_15",
+    "CMSSW_8_0_10" : "CMSSW_8_0_15",
+    "CMSSW_8_0_11" : "CMSSW_8_0_15",
+    "CMSSW_8_0_12" : "CMSSW_8_0_15",
+    "CMSSW_8_0_13" : "CMSSW_8_0_15",
+    "CMSSW_8_0_14" : "CMSSW_8_0_15"
     }
 
 #set default repack settings for bulk streams
@@ -415,11 +407,8 @@ for dataset in datasets:
 ### HLTPhysics PDs                                   ###
 ########################################################
 
-datasets = [ "HLTPhysics", "HLTPhysics0", "HLTPhysics1", "HLTPhysics2", 
-             "HLTPhysics3", "HLTPhysics4", "HLTPhysics5", "HLTPhysics6", 
-             "HLTPhysics7", "HLTPhysics8", "HLTPhysicspart0", "HLTPhysicspart1",
-             "HLTPhysicspart2", "HLTPhysicspart3", "HLTPhysicspart4",
-             "HLTPhysicspart5", "HLTPhysicspart6", "HLTPhysicspart7"  ]
+
+datasets = [ "HLTPhysics" ]
 
 for dataset in datasets:
     addDataset(tier0Config, dataset,
@@ -429,11 +418,7 @@ for dataset in datasets:
                physics_skims = [ "LogError", "LogErrorMonitor" ],
                scenario = ppScenario)
 
-datasets = [ "HLTPhysics_0T", "HLTPhysics0_0T","HLTPhysics1_0T", "HLTPhysics2_0T", 
-             "HLTPhysics3_0T", "HLTPhysics4_0T", "HLTPhysics5_0T", "HLTPhysics6_0T", 
-             "HLTPhysics7_0T", "HLTPhysics8_0T", "HLTPhysicspart0_0T", "HLTPhysicspart1_0T",
-             "HLTPhysicspart2_0T", "HLTPhysicspart3_0T", "HLTPhysicspart4_0T",
-             "HLTPhysicspart5_0T", "HLTPhysicspart6_0T", "HLTPhysicspart7_0T" ]
+datasets = [ "HLTPhysics_0T" ]
 
 for dataset in datasets:
     addDataset(tier0Config, dataset,
@@ -441,6 +426,28 @@ for dataset in datasets:
                write_dqm = True,
                alca_producers = [ "SiStripCalMinBias", "TkAlMinBias", "HcalCalIsoTrkFilter" ],
                physics_skims = [ "LogError", "LogErrorMonitor" ],
+               scenario = ppScenarioB0T)
+
+datasets = [ "HLTPhysics0", "HLTPhysics1", "HLTPhysics2", "HLTPhysics3",
+             "HLTPhysics4", "HLTPhysics5", "HLTPhysics6", "HLTPhysics7",
+             "HLTPhysics8", "HLTPhysicspart0", "HLTPhysicspart1",
+             "HLTPhysicspart2", "HLTPhysicspart3", "HLTPhysicspart4",
+             "HLTPhysicspart5", "HLTPhysicspart6", "HLTPhysicspart7"  ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = False,
+               scenario = ppScenario)
+
+datasets = [ "HLTPhysics0_0T", "HLTPhysics1_0T", "HLTPhysics2_0T", "HLTPhysics3_0T", 
+             "HLTPhysics4_0T", "HLTPhysics5_0T", "HLTPhysics6_0T", "HLTPhysics7_0T", 
+             "HLTPhysics8_0T", "HLTPhysicspart0_0T", "HLTPhysicspart1_0T",
+             "HLTPhysicspart2_0T", "HLTPhysicspart3_0T", "HLTPhysicspart4_0T",
+             "HLTPhysicspart5_0T", "HLTPhysicspart6_0T", "HLTPhysicspart7_0T"  ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = False,
                scenario = ppScenarioB0T)
 
 ################################
@@ -974,6 +981,24 @@ for dataset in datasets:
                write_reco = False, write_aod = False, write_miniaod = True, write_dqm = True,
                dqm_sequences = [ "@common" ],
                scenario = ppScenarioB0T)
+    
+datasets = [ "ParkingHLTPhysics", "ParkingZeroBias", "AlCaPhiSym", "AlCaP0", 
+             "AlCaElectron", "RPCMonitor", "VRRandom", "VRZeroBias", "VirginRaw" ]  
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = False,
+               raw_to_disk = True,
+               scenario = ppScenario)    
+    
+datasets = [ "ParkingHLTPhysics_0T", "ParkingZeroBias_0T", "AlCaPhiSym_0T", "AlCaP0_0T", 
+             "AlCaElectron_0T", "RPCMonitor_0T", "VRRandom_0T", "VRZeroBias_0T", "VirginRaw_0T" ]  
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = False,
+               raw_to_disk = True,
+               scenario = ppScenarioB0T)     
 
 #########################################
 ### New PDs for pp Reference Run 2015 ###
