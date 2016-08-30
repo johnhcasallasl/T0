@@ -41,7 +41,7 @@ processingSite = "T0_CH_CERN"
 #  Data type
 #  Processing site (where jobs run)
 #  PhEDEx locations
-setAcquisitionEra(tier0Config, "Run2016F")
+setAcquisitionEra(tier0Config, "Run2016G")
 setBaseRequestPriority(tier0Config, 250000)
 setBackfill(tier0Config, None)
 setBulkDataType(tier0Config, "data")
@@ -447,6 +447,29 @@ for dataset in datasets:
                timePerEvent = 3.5,
                sizePerEvent = 1500,
                scenario = ppScenarioB0T)
+    
+datasets = [ "ZeroBiasFirstBunchAfterTrain", "ZeroBiasFirstBunchInTrain" ]    
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               write_reco = True,
+               raw_to_disk = True,
+               write_dqm = True,
+               dqm_sequences = [ "@common" ],
+               scenario = ppScenario)
+
+datasets = [ "ZeroBiasFirstBunchAfterTrain_0T", "ZeroBiasFirstBunchInTrain_0T" ]    
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               write_reco = True,
+               raw_to_disk = True,
+               write_dqm = True,
+               dqm_sequences = [ "@common" ],
+               scenario = ppScenarioB0T)
+
 
 ########################################################
 ### HLTPhysics PDs                                   ###
