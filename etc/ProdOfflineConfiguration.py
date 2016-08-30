@@ -98,8 +98,8 @@ alcarawProcVersion = 1
 
 # Defaults for GlobalTag
 expressGlobalTag = "80X_dataRun2_Express_v12"
-promptrecoGlobalTag = "80X_dataRun2_Prompt_v10"
-alcap0GlobalTag = "80X_dataRun2_Prompt_v10"
+promptrecoGlobalTag = "80X_dataRun2_Prompt_v11"
+alcap0GlobalTag = "80X_dataRun2_Prompt_v11"
 
 # Mandatory for CondDBv2
 globalTagConnect = "frontier://PromptProd/CMS_CONDITIONS"
