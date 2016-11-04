@@ -41,10 +41,10 @@ processingSite = "T0_CH_CERN"
 #  Data type
 #  Processing site (where jobs run)
 #  PhEDEx locations
-setAcquisitionEra(tier0Config, "PARun2016A")
+setAcquisitionEra(tier0Config, "PARun2016B")
 setBaseRequestPriority(tier0Config, 250000)
 setBackfill(tier0Config, None)
-setBulkDataType(tier0Config, "data")
+setBulkDataType(tier0Config, "hidata")
 setProcessingSite(tier0Config, processingSite)
 setExpressSubscribeNode(tier0Config, "T2_CH_CERN")
 
@@ -77,8 +77,7 @@ setPromptCalibrationConfig(tier0Config,
 
 # Defaults for CMSSW version
 defaultCMSSWVersion = {
-       'acqEra': {'Run2016D': "CMSSW_8_0_13_patch1"},
-       'default': "CMSSW_8_0_22"
+       'default': "CMSSW_8_0_23_patch2"
      }
 
 # Configure ScramArch
@@ -89,6 +88,7 @@ ppScenario = "ppEra_Run2_2016"
 ppScenarioB0T = "ppEra_Run2_2016"
 cosmicsScenario = "cosmicsEra_Run2_2016"
 hcalnzsScenario = "hcalnzsEra_Run2_2016"
+hiScenario = "ppEra_Run2_2016_pA"
 
 # Defaults for processing version
 defaultProcVersionRAW = 1
@@ -110,8 +110,8 @@ alcarawProcVersion = {
 
 # Defaults for GlobalTag
 expressGlobalTag = "80X_dataRun2_Express_v15"
-promptrecoGlobalTag = "80X_dataRun2_Prompt_v14"
-alcap0GlobalTag = "80X_dataRun2_Prompt_v14"
+promptrecoGlobalTag = "80X_dataRun2_Prompt_v15"
+alcap0GlobalTag = "80X_dataRun2_Prompt_v15"
 
 # Mandatory for CondDBv2
 globalTagConnect = "frontier://PromptProd/CMS_CONDITIONS"
@@ -131,28 +131,30 @@ repackVersionOverride = {
     }
 
 expressVersionOverride = {
-    "CMSSW_8_0_0" : "CMSSW_8_0_22",
-    "CMSSW_8_0_1" : "CMSSW_8_0_22",
-    "CMSSW_8_0_2" : "CMSSW_8_0_22",
-    "CMSSW_8_0_3" : "CMSSW_8_0_22",
-    "CMSSW_8_0_4" : "CMSSW_8_0_22",
-    "CMSSW_8_0_5" : "CMSSW_8_0_22",
-    "CMSSW_8_0_6" : "CMSSW_8_0_22",
-    "CMSSW_8_0_7" : "CMSSW_8_0_22",
-    "CMSSW_8_0_8" : "CMSSW_8_0_22",
-    "CMSSW_8_0_9" : "CMSSW_8_0_22",
-    "CMSSW_8_0_10" : "CMSSW_8_0_22",
-    "CMSSW_8_0_11" : "CMSSW_8_0_22",
-    "CMSSW_8_0_12" : "CMSSW_8_0_22",
-    "CMSSW_8_0_13" : "CMSSW_8_0_22",
-    "CMSSW_8_0_14" : "CMSSW_8_0_22",
-    "CMSSW_8_0_15" : "CMSSW_8_0_22",
-    "CMSSW_8_0_16" : "CMSSW_8_0_22",
-    "CMSSW_8_0_17" : "CMSSW_8_0_22",
-    "CMSSW_8_0_18" : "CMSSW_8_0_22",
-    "CMSSW_8_0_19" : "CMSSW_8_0_22",
-    "CMSSW_8_0_20" : "CMSSW_8_0_22",
-    "CMSSW_8_0_21" : "CMSSW_8_0_22"
+    "CMSSW_8_0_0" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_1" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_2" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_3" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_4" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_5" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_6" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_7" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_8" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_9" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_10" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_11" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_12" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_13" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_14" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_15" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_16" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_17" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_18" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_19" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_20" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_21" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_22" : "CMSSW_8_0_23_patch2",
+    "CMSSW_8_0_23" : "CMSSW_8_0_23_patch2"
     }
 
 #set default repack settings for bulk streams
@@ -172,7 +174,7 @@ addRepackConfig(tier0Config, "Default",
 
 addDataset(tier0Config, "Default",
            do_reco = False,
-           write_reco = False, write_aod = True, write_miniaod = True, write_dqm = False,
+           write_reco = False, write_aod = True, write_miniaod = False, write_dqm = False,
            reco_delay = defaultRecoTimeout,
            reco_delay_offset = defaultRecoLockTimeout,
            reco_split = defaultRecoSplitting,
@@ -1271,7 +1273,7 @@ for dataset in datasets:
     addDataset(tier0Config, dataset,
                do_reco = True,
                dqm_sequences = [ "@common" ],
-               write_reco = False, write_aod = False, write_miniaod = True, write_dqm = True,
+               write_reco = False, write_aod = False, write_miniaod = False, write_dqm = True,
                tape_node = "T1_US_FNAL_MSS",
                disk_node = None,
                scenario = ppScenario)
@@ -1282,7 +1284,7 @@ for dataset in datasets:
     addDataset(tier0Config, dataset,
                do_reco = True,
                dqm_sequences = [ "@common" ],
-               write_reco = False, write_aod = False, write_miniaod = True, write_dqm = True,
+               write_reco = False, write_aod = False, write_miniaod = False, write_dqm = True,
                tape_node = "T1_US_FNAL_MSS",
                disk_node = None,
                scenario = ppScenarioB0T)
@@ -1427,6 +1429,88 @@ addDataset(tier0Config, "SingleMuLowPt_0T",
            alca_producers = [ "TkAlMuonIsolated", "HcalCalIterativePhiSym", "DtCalib", "MuAlCalIsolatedMu", "MuAlOverlaps", "MuAlZMuMu" ],
            scenario = ppScenarioB0T)
 
+#########################################
+### New PDs for PARun 2016 ###
+#########################################
+
+datasets = [ "PAHighMultiplicity0", "PAHighMultiplicity1", "PAHighMultiplicity2", "PAHighMultiplicity3",
+             "PAHighMultiplicity4", "PAHighMultiplicity5", "PAHighMultiplicity6", "PAHighMultiplicity7" ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               write_dqm = True,
+               dqm_sequences = [ "@common" ],
+               scenario = hiScenario)
+
+addDataset(tier0Config, "PACastor",
+           do_reco = True,
+           write_dqm = True,
+           dqm_sequences = [ "@common" ],
+           scenario = hiScenario)
+
+addDataset(tier0Config, "PAForward",
+           do_reco = True,
+           write_dqm = True,
+           dqm_sequences = [ "@common" ],
+           scenario = hiScenario)
+
+addDataset(tier0Config, "PADoubleMuon",
+           do_reco = True,
+           write_dqm = True,
+           dqm_sequences = [ "@common" ],
+           alca_producers = [ "TkAlMuonIsolatedPA", "TkAlZMuMuPA", "TkAlUpsilonMuMuPA", "DtCalib" ],
+           scenario = hiScenario)
+
+addDataset(tier0Config, "PASingleMuon",
+           do_reco = True,
+           write_dqm = True,
+           dqm_sequences = [ "@common" ],
+           alca_producers = [ "TkAlMuonIsolatedPA", "DtCalib" ],
+           physics_skims = [ "PAZMM" ],
+           scenario = hiScenario)
+
+datasets = [ "PADTrack1", "PADTrack2" ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               write_dqm = True,
+               dqm_sequences = [ "@common" ],
+               scenario = hiScenario)
+
+addDataset(tier0Config, "PAEGJet1",
+           do_reco = True,
+           write_dqm = True,
+           dqm_sequences = [ "@common" ],
+           physics_skims = [ "PAZEE" ],
+           scenario = hiScenario)
+
+datasets = [ "PAMinimumBias1", "PAMinimumBias2", "PAMinimumBias3", "PAMinimumBias4", 
+             "PAMinimumBias5", "PAMinimumBias6", "PAMinimumBias7", "PAMinimumBias8" ]
+
+for dataset in datasets:
+    addDataset(tier0Config, dataset,
+               do_reco = True,
+               write_dqm = True,
+               dqm_sequences = [ "@common" ],
+               alca_producers = [ "SiStripCalMinBias", "TkAlMinBias" ],
+               scenario = hiScenario)
+
+addDataset(tier0Config, "PAMinimumBiasBkg",
+           do_reco = True,
+           write_dqm = True,
+           dqm_sequences = [ "@common" ],
+           physics_skims = [ "PAMinBias" ],
+           scenario = hiScenario)
+
+
+addDataset(tier0Config, "PAEmptyBX",
+           do_reco = True,
+           write_dqm = True,
+           dqm_sequences = [ "@common" ],
+           scenario = hiScenario)
+
 #############################
 ### Express configuration ###
 #############################
@@ -1507,6 +1591,52 @@ addExpressConfig(tier0Config, "HLTMonitor",
                  write_dqm = True,
                  alca_producers = [],
                  dqm_sequences = [ "@HLTMon" ],
+                 reco_version = defaultCMSSWVersion,
+                 multicore = numberOfCores,
+                 global_tag_connect = globalTagConnect,
+                 global_tag = expressGlobalTag,
+                 proc_ver = expressProcVersion,
+                 maxInputRate = 23 * 1000,
+                 maxInputEvents = 400,
+                 maxInputSize = 2 * 1024 * 1024 * 1024,
+                 maxInputFiles = 15,
+                 maxLatency = 15 * 23,
+                 periodicHarvestInterval = 20 * 60,
+                 blockCloseDelay = 1200,
+                 timePerEvent = 4, #I have to get some stats to set this properly
+                 sizePerEvent = 1700, #I have to get some stats to set this properly
+                 versionOverride = expressVersionOverride)
+
+addExpressConfig(tier0Config, "ExpressPA",
+                 scenario = hiScenario,
+                 data_tiers = [ "FEVT" ],
+                 write_dqm = True,
+                 alca_producers = [ "SiStripCalZeroBias", "TkAlMinBias", "DtCalib", "SiStripCalMinBias", 
+                                     "SiStripCalMinBiasAfterAbortGap", "LumiPixelsMinBias", "PromptCalibProd",
+                                     "PromptCalibProdSiStrip", "PromptCalibProdSiPixelAli", "PromptCalibProdSiStripGains", 
+                                     "PromptCalibProdSiStripGainsAfterAbortGap" ],
+                 reco_version = defaultCMSSWVersion,
+                 multicore = numberOfCores,
+                 global_tag_connect = globalTagConnect,
+                 global_tag = expressGlobalTag,
+                 proc_ver = expressProcVersion,
+                 maxInputRate = 23 * 1000,
+                 maxInputEvents = 400,
+                 maxInputSize = 2 * 1024 * 1024 * 1024,
+                 maxInputFiles = 15,
+                 maxLatency = 15 * 23,
+                 periodicHarvestInterval = 20 * 60,
+                 blockCloseDelay = 1200,
+                 timePerEvent = 4,
+                 sizePerEvent = 1700,
+                 versionOverride = expressVersionOverride)
+
+addExpressConfig(tier0Config, "HLTMonitorPA",
+                 scenario = hiScenario,
+                 data_tiers = [ "FEVTHLTALL" ],
+                 write_dqm = True,
+                 alca_producers = [],
+                 dqm_sequences = [ "@HLTMonPA" ],
                  reco_version = defaultCMSSWVersion,
                  multicore = numberOfCores,
                  global_tag_connect = globalTagConnect,
