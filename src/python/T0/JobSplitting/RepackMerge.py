@@ -12,7 +12,7 @@ from WMCore.WMBS.File import File
 
 from WMCore.JobSplitting.JobFactory import JobFactory
 from WMCore.DAOFactory import DAOFactory
-from WMCore.Services.UUID import makeUUID
+from WMCore.Services.UUIDLib import makeUUID
 
 
 class RepackMerge(JobFactory):
@@ -331,10 +331,10 @@ class RepackMerge(JobFactory):
             self.currentJob.addBaggageParameter("numberOfCores", numberOfCores)
 
         # job time based on
-        #   - 5 min initialization
-        #   - 5MB/s merge speed
-        #   - checksum calculation at 5MB/s
-        #   - stageout at 5MB/s
+        #  - 5 min initialization
+        #  - 5MB/s merge speed
+        #  - checksum calculation at 5MB/s
+        #  - stageout at 5MB/s
         # job disk based on
         #  - input for largest file on local disk
         #  - output on local disk (factor 1)
