@@ -41,7 +41,7 @@ processingSite = "T0_CH_CERN"
 #  Data type
 #  Processing site (where jobs run)
 #  PhEDEx locations
-setAcquisitionEra(tier0Config, "PARun2016C")
+setAcquisitionEra(tier0Config, "PARun2016D")
 setBaseRequestPriority(tier0Config, 250000)
 setBackfill(tier0Config, None)
 setBulkDataType(tier0Config, "hidata")
