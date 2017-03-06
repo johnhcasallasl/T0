@@ -41,7 +41,7 @@ processingSite = "T0_CH_CERN"
 #  Data type
 #  Processing site (where jobs run)
 #  PhEDEx locations
-setAcquisitionEra(tier0Config, "PARun2016A")
+setAcquisitionEra(tier0Config, "Commissioning2017")
 setBaseRequestPriority(tier0Config, 250000)
 setBackfill(tier0Config, None)
 setBulkDataType(tier0Config, "data")
@@ -77,41 +77,37 @@ setPromptCalibrationConfig(tier0Config,
 
 # Defaults for CMSSW version
 defaultCMSSWVersion = {
-       'acqEra': {'Run2016D': "CMSSW_8_0_13_patch1"},
-       'default': "CMSSW_8_0_22"
+       'default': "CMSSW_8_4_0_patch1"
      }
 
 # Configure ScramArch
 setDefaultScramArch(tier0Config, "slc6_amd64_gcc530")
 
 # Configure scenarios
-ppScenario = "ppEra_Run2_2016"
-ppScenarioB0T = "ppEra_Run2_2016"
-cosmicsScenario = "cosmicsEra_Run2_2016"
-hcalnzsScenario = "hcalnzsEra_Run2_2016"
+ppScenario = "ppEra_Run2_2017"
+ppScenarioB0T = "ppEra_Run2_2017"
+cosmicsScenario = "cosmicsEra_Run2_2017"
+hcalnzsScenario = "hcalnzsEra_Run2_2017"
 
 # Defaults for processing version
 defaultProcVersionRAW = 1
 
 defaultProcVersionReco = {
-       'acqEra': {'Run2016H': "3"},
        'default': "1"
      }
 
 expressProcVersion = {
-       'acqEra': {'Run2016H': "3"},
        'default': "1"
      }
 
 alcarawProcVersion = {
-       'acqEra': {'Run2016H': "2"},
        'default': "1"
      }
 
 # Defaults for GlobalTag
-expressGlobalTag = "80X_dataRun2_Express_v15"
-promptrecoGlobalTag = "80X_dataRun2_Prompt_v14"
-alcap0GlobalTag = "80X_dataRun2_Prompt_v14"
+expressGlobalTag = "90X_dataRun2_Express_v2"
+promptrecoGlobalTag = "90X_dataRun2_Prompt_v2"
+alcap0GlobalTag = "90X_dataRun2_Prompt_v2"
 
 # Mandatory for CondDBv2
 globalTagConnect = "frontier://PromptProd/CMS_CONDITIONS"
@@ -131,28 +127,7 @@ repackVersionOverride = {
     }
 
 expressVersionOverride = {
-    "CMSSW_8_0_0" : "CMSSW_8_0_22",
-    "CMSSW_8_0_1" : "CMSSW_8_0_22",
-    "CMSSW_8_0_2" : "CMSSW_8_0_22",
-    "CMSSW_8_0_3" : "CMSSW_8_0_22",
-    "CMSSW_8_0_4" : "CMSSW_8_0_22",
-    "CMSSW_8_0_5" : "CMSSW_8_0_22",
-    "CMSSW_8_0_6" : "CMSSW_8_0_22",
-    "CMSSW_8_0_7" : "CMSSW_8_0_22",
-    "CMSSW_8_0_8" : "CMSSW_8_0_22",
-    "CMSSW_8_0_9" : "CMSSW_8_0_22",
-    "CMSSW_8_0_10" : "CMSSW_8_0_22",
-    "CMSSW_8_0_11" : "CMSSW_8_0_22",
-    "CMSSW_8_0_12" : "CMSSW_8_0_22",
-    "CMSSW_8_0_13" : "CMSSW_8_0_22",
-    "CMSSW_8_0_14" : "CMSSW_8_0_22",
-    "CMSSW_8_0_15" : "CMSSW_8_0_22",
-    "CMSSW_8_0_16" : "CMSSW_8_0_22",
-    "CMSSW_8_0_17" : "CMSSW_8_0_22",
-    "CMSSW_8_0_18" : "CMSSW_8_0_22",
-    "CMSSW_8_0_19" : "CMSSW_8_0_22",
-    "CMSSW_8_0_20" : "CMSSW_8_0_22",
-    "CMSSW_8_0_21" : "CMSSW_8_0_22"
+    "CMSSW_8_4_0" : "CMSSW_8_4_0_patch1",
     }
 
 #set default repack settings for bulk streams
